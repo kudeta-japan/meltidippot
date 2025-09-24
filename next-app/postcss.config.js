@@ -1,8 +1,6 @@
-// CommonJS でOK
+// next-app/postcss.config.js
 module.exports = {
   plugins: {
     autoprefixer: {},
-    // nesting等を使うなら ↓ を追加
-    // 'postcss-nesting': {}
   },
 };
