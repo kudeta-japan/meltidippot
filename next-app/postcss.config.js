@@ -1,6 +1,1 @@
-// next-app/postcss.config.js
-module.exports = {
-  plugins: {
-    autoprefixer: {},
-  },
-};
+module.exports = { plugins: { autoprefixer: {} } };
