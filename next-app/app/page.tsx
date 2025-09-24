@@ -21,12 +21,13 @@ export default function Page() {
     if (spinning) return;
     setSpinning(true);
 
+    // 疑似スピン（アニメーションと結果確定のタイミングを同期）
     setTimeout(() => {
       const pick = OPTIONS[Math.floor(Math.random() * OPTIONS.length)];
       setResult(pick);
       setHistory((h) => [pick, ...h].slice(0, 8));
       setSpinning(false);
-    }, 1600); // 疑似スピン時間
+    }, 1600);
   }
 
   function reset() {
@@ -74,7 +75,7 @@ export default function Page() {
           <h2>履歴</h2>
           <ul>
             {history.map((h, i) => (
-              <li key={i}>
+              <li key={`${h}-${i}`}>
                 <span className="dot" />
                 {h}
               </li>
