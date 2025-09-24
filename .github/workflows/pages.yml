@@ -21,9 +21,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: next-app/package-lock.json
+          node-version: 20    # ← cache指定は入れない
 
       - name: Install deps
         working-directory: next-app
@@ -44,7 +42,6 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          # Next.js の静的出力先
           path: next-app/out
 
   deploy:
@@ -55,4 +52,4 @@ jobs:
     needs: build
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4.github/workflows/pages.yml
+        uses: actions/deploy-pages@v4   # ← これが正しい
