@@ -2,34 +2,38 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-/* ===== GitHub Pages 用プレフィックス ===== */
+/* ===== base path (GH Pages対応) ===== */
 const prefix = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const img = (file: string) => `${prefix}/img/bg/${file}`;
 
 /* ===== types ===== */
 type FaceExpression = 'smile' | 'cheer' | 'surprised' | 'wink' | 'tongue' | 'havefun';
+
 type Item = {
   id: string;
   name: string;
   description: string;
-  emoji: string;           // フォールバック表示用に残しておく
-  icon: string;            // public/img/bg/ 配下のファイル名（拡張子まで）
+  emoji: string;         // フォールバック表示用
+  icon: string;          // 画像ファイル名のみ（例: 'veg.png'）
   accent: string;
   face: FaceExpression;
 };
+
 type Result = { id: string; name: string; emoji: string };
 
-/* ===== items（画像ファイル名はリポジトリの実名に合わせています） ===== */
+/* ===== items (6種類) =====
+   ※ ファイル名は public/img/bg/ にある実ファイル名と完全一致させてください。
+   ※ もし実ファイルが 'shurimp.png' なら 'shrimp.png' を 'shurimp.png' に変更してください。 */
 const ITEMS: Item[] = [
-  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', emoji: '🥦', icon: 'vege.jpg',     accent: '#5ed67d', face: 'cheer' },
-  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           emoji: '🍖', icon: 'pork.jpg',     accent: '#ff7f7f', face: 'smile' },
-  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         emoji: '🥩', icon: 'beef.jpg',     accent: '#f76367', face: 'smile' },
-  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        emoji: '🍗', icon: 'chichken.jpg', accent: '#ff9e6e', face: 'wink' },
-  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       emoji: '🥖', icon: 'bage.jpg',      accent: '#ffd166', face: 'tongue' },
-  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            emoji: '🍤', icon: 'shrimp.jpg',   accent: '#ff9472', face: 'havefun' },
+  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', emoji: '🥦', icon: 'veg.png',      accent: '#5ed67d', face: 'cheer' },
+  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           emoji: '🍖', icon: 'pork.png',     accent: '#ff7f7f', face: 'smile' },
+  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         emoji: '🥩', icon: 'beef.png',     accent: '#f76367', face: 'smile' },
+  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        emoji: '🍗', icon: 'chicken.png',  accent: '#ff9e6e', face: 'wink' },
+  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       emoji: '🥖', icon: 'baguette.png', accent: '#ffd166', face: 'tongue' },
+  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            emoji: '🍤', icon: 'shrimp.png',   accent: '#ff9472', face: 'havefun' },
 ];
 
-/* ===== 角度ユーティリティ ===== */
+/* ===== geometry utils ===== */
 const SEGMENT_ANGLE = 360 / ITEMS.length;
 const toRadians = (deg: number) => (deg * Math.PI) / 180;
 const clampAngle = (deg: number) => ((deg % 360) + 360) % 360;
@@ -54,6 +58,7 @@ const FaceArt = ({ expression }: { expression: FaceExpression }) => {
     tongue: 'M120 188 C170 232 230 232 280 188 L276 220 C248 260 208 272 180 240 Z',
     havefun: 'M115 188 C160 238 240 238 285 188',
   };
+
   const brow: Record<FaceExpression, { left: string; right: string }> = {
     smile:     { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' },
     cheer:     { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
@@ -62,24 +67,28 @@ const FaceArt = ({ expression }: { expression: FaceExpression }) => {
     tongue:    { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' },
     havefun:   { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
   };
+
   const highlight = expression === 'havefun' ? '#fff4c1' : '#ffe7d1';
 
   return (
-    <svg viewBox="0 0 360 360" className="face-art" role="img" aria-hidden="true">
+    <svg viewBox="0 0 360 360" className="face-art" role="img" aria-hidden>
       <defs>
         <radialGradient id={`faceGradient-${expression}`} cx="50%" cy="35%" r="70%">
           <stop offset="0%" stopColor="#fff1c6" />
           <stop offset="100%" stopColor="#f3c669" />
         </radialGradient>
       </defs>
+
       <circle cx="180" cy="180" r="170" fill={`url(#faceGradient-${expression})`} stroke="#b88429" strokeWidth="8" />
       <ellipse cx="120" cy="150" rx="28" ry="36" fill="#fff" />
       <ellipse cx="240" cy="150" rx="28" ry="36" fill="#fff" />
       <circle cx="120" cy="152" r="12" fill="#3d2a18" />
       <circle cx="240" cy="152" r="12" fill="#3d2a18" />
+
       <path d={mouth[expression]} stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill={expression === 'surprised' ? '#ff7770' : 'none'} />
       <path d="M130 110 Q140 96 170 108" stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill="none" transform={brow[expression].left} />
       <path d="M210 108 Q240 96 256 114" stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill="none" transform={brow[expression].right} />
+
       <rect x="165" y="180" width="30" height="46" rx="14" fill="#ff4757" stroke="#862133" strokeWidth="4" />
       <circle cx="180" cy="212" r="58" fill="#ff6542" stroke="#9f2c26" strokeWidth="8" />
       <path d="M160 236 Q180 244 200 236" stroke="#ffd5d0" strokeWidth="10" strokeLinecap="round" fill="none" opacity="0.6" />
@@ -101,7 +110,7 @@ const CongratsCard = () => (
   </div>
 );
 
-/* ===== audio ===== */
+/* ===== audio helpers ===== */
 function createAudioContext() {
   if (typeof window === 'undefined') return null;
   try {
@@ -137,11 +146,9 @@ export default function MeltyDipRoulette() {
   const highlightTimerRef = useRef<number>();
   const [muted, setMuted] = useState(false);
   const audioRef = useRef<AudioContext | null>(null);
+
   const [flashImg, setFlashImg] = useState<string | null>(null);
   const flashTimerRef = useRef<number>();
-
-  /* keep latest finishStop for RAF (effect runs once) */
-  const finishStopRef = useRef<() => void>(() => {});
 
   const ensureAudio = useCallback(() => {
     if (muted) return null;
@@ -198,7 +205,7 @@ export default function MeltyDipRoulette() {
     return () => { document.body.classList.remove('meltydip-body'); };
   }, []);
 
-  /* === helpers === */
+  /* === helpers for index/angle === */
   const getPointerAngle = useCallback((value: number) => clampAngle(360 - clampAngle(value)), []);
   const indexFromRotation = useCallback((value: number) => {
     const pointerAngle = getPointerAngle(value);
@@ -212,14 +219,16 @@ export default function MeltyDipRoulette() {
     // オーバーレイが出ていたら閉じる
     if (showStart) setShowStart(false);
 
-    // 「回す」は必ず反応：残回数が0なら1回ぶん付与
+    // 残回数が0でも必ず1回は回せる保険
     if (spinsLeftRef.current <= 0) {
       setSpinsLeft(1);
       spinsLeftRef.current = 1;
       showToastMessage('お試しスピン 1回');
     }
 
-    velocityRef.current = 0.1;
+    // 初速をしっかり与える（必ず回る）
+    velocityRef.current = 360;       // deg/s
+    setRotation((r) => r + 0.001);   // 強制再描画のキッカケ
     modeRef.current = 'spinning';
     setMode('spinning');
   };
@@ -247,7 +256,7 @@ export default function MeltyDipRoulette() {
     setMode('stopping');
   };
 
-  /* === 停止処理 === */
+  /* === finishStop === */
   const finishStop = useCallback(() => {
     modeRef.current = 'idle';
     setMode('idle');
@@ -267,7 +276,7 @@ export default function MeltyDipRoulette() {
 
     setResults((prev) => [...prev, { id: item.id, name: item.name, emoji: item.emoji }]);
 
-    // フラッシュ
+    // 停止直後のフラッシュ画像
     setFlashImg(img(item.icon));
     if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
     flashTimerRef.current = window.setTimeout(() => setFlashImg(null), 900);
@@ -278,39 +287,47 @@ export default function MeltyDipRoulette() {
 
     if (next === 0) {
       setShowCongrats(true);
-      window.setTimeout(() => { setShowCongrats(false); setShowSummary(true); }, 2000);
+      window.setTimeout(() => {
+        setShowCongrats(false);
+        setShowSummary(true);
+      }, 2000);
     }
   }, [indexFromRotation, playResultChime, showToastMessage]);
 
-  useEffect(() => { finishStopRef.current = finishStop; }, [finishStop]);
-
-  /* === RAF ループ（1回だけセット、finishStop は ref 経由） === */
+  /* === RAF loop === */
   useEffect(() => {
     let frame = 0;
     let last = performance.now();
+
+    const ACC  = 1200; // 加速度(deg/s^2)
+    const VMAX = 1500; // 最高速度(deg/s)
+
     const step = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
 
       if (modeRef.current === 'spinning') {
-        velocityRef.current = Math.min(18, velocityRef.current + 24 * dt);
+        velocityRef.current = Math.min(VMAX, velocityRef.current + ACC * dt);
         const next = rotationRef.current + velocityRef.current * dt;
-        setRotation(next);
         rotationRef.current = next;
+        setRotation(next);
       } else if (modeRef.current === 'stopping') {
         const elapsed = (now - stopStartTimeRef.current) / 1000;
         const t = Math.min(1, elapsed / stopDurationRef.current);
         const eased = 1 - Math.pow(1 - t, 3);
         const value = stopStartRef.current + (stopTargetRef.current - stopStartRef.current) * eased;
-        setRotation(value);
         rotationRef.current = value;
-        if (t >= 1) finishStopRef.current();
+        setRotation(value);
+        if (t >= 1) finishStop();
       }
+
       frame = window.requestAnimationFrame(step);
     };
+
     frame = window.requestAnimationFrame(step);
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ループは一度だけセット
 
   /* === cleanup === */
   useEffect(() => {
@@ -327,6 +344,7 @@ export default function MeltyDipRoulette() {
     const total = 48;
     return Array.from({ length: total }, (_, i) => ({ index: i, angle: i * (360 / total) }));
   }, []);
+
   const isSegmentHighlighted = useCallback((angle: number) => {
     if (highlightIdx == null) return false;
     const start = clampAngle(highlightIdx * SEGMENT_ANGLE - SEGMENT_ANGLE / 2);
@@ -338,6 +356,7 @@ export default function MeltyDipRoulette() {
   return (
     <main className="meltydip-app">
       <div className="backdrop">
+        {/* 背景写真 */}
         <div className="bg-photo" style={{ backgroundImage: `url(${img('top.png')})` }} aria-hidden />
         <div className="blur" />
         <div className="hero-copy">
@@ -375,12 +394,19 @@ export default function MeltyDipRoulette() {
                   const start = index * SEGMENT_ANGLE - SEGMENT_ANGLE / 2;
                   const end = start + SEGMENT_ANGLE;
                   return (
-                    <path key={item.id} d={describeArc(start, end, 104)} fill={`url(#grad-${item.id})`} stroke="#0a0b16" strokeWidth="0.9"
-                      className={highlightIdx === index ? 'segment highlight' : 'segment'} />
+                    <path
+                      key={item.id}
+                      d={describeArc(start, end, 104)}
+                      fill={`url(#grad-${item.id})`}
+                      stroke="#0a0b16"
+                      strokeWidth="0.9"
+                      className={highlightIdx === index ? 'segment highlight' : 'segment'}
+                    />
                   );
                 })}
               </svg>
 
+              {/* 絵文字の代わりにアイコン画像 */}
               <div className="labels">
                 {ITEMS.map((item, index) => (
                   <div key={item.id} className="label" style={{ transform: `rotate(${index * SEGMENT_ANGLE}deg)` }}>
@@ -398,6 +424,7 @@ export default function MeltyDipRoulette() {
             <div className="pointer"><div className="pointer-inner" /></div>
           </div>
 
+          {/* ルーレットの直下に操作を置いてクリックを食われないように */}
           <div className="controls under-wheel">
             <button onClick={startSpin} disabled={mode !== 'idle'}>回す 🎡</button>
             <button onClick={stopSpin} disabled={mode !== 'spinning'}>止める ⏹</button>
@@ -440,8 +467,7 @@ export default function MeltyDipRoulette() {
         <div className="overlay summary">
           <div className="card">
             <h2>結果まとめ</h2>
-            <table>
-              <thead><tr><th>メニュー</th><th>回数</th></tr></thead>
+            <table><thead><tr><th>メニュー</th><th>回数</th></tr></thead>
               <tbody>
                 {(() => {
                   const map = new Map<string, { name: string; count: number; emoji: string }>();
@@ -459,15 +485,16 @@ export default function MeltyDipRoulette() {
         </div>
       )}
 
+      {/* 停止直後のフラッシュ表示 */}
       {flashImg && (
         <div className="flash" aria-hidden>
           <img src={flashImg} alt="" />
         </div>
       )}
 
-      {/* ===== in-file styles ===== */}
+      {/* ===== styles ===== */}
       <style jsx>{`
-        .meltydip-app{position:relative;min-height:100vh;overflow:hidden;color:#eef2ff}
+        .meltydip-app{position:relative;min-height:100vh;color:#eef2ff;overflow:hidden}
         .backdrop{position:absolute;inset:0;pointer-events:none}
         .bg-photo{position:absolute;inset:0;background:center/cover no-repeat;filter:brightness(.5)}
         .backdrop .blur{position:absolute;inset:-40px;background:
@@ -483,7 +510,7 @@ export default function MeltyDipRoulette() {
         .hero-face :global(.face-art){width:100%;height:auto}
 
         .stage{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,420px);gap:32px;padding:clamp(120px,16vw,160px) clamp(32px,6vw,60px) 60px}
-        .wheel-area{display:grid;place-items:center}
+        .wheel-area{display:grid;grid-template-rows:1fr auto;row-gap:14px;align-items:center;justify-items:center}
         .wheel-wrapper{position:relative;width:min(620px,72vw);aspect-ratio:1/1;display:grid;place-items:center;--led-radius:calc(50% - clamp(20px,3vw,36px))}
         .led-ring{position:absolute;inset:0;display:grid;place-items:center}
         .led{position:absolute;width:clamp(10px,1.2vw,16px);aspect-ratio:1/1;border-radius:50%;background:radial-gradient(circle, rgba(255,230,160,.9), rgba(255,150,60,.3));box-shadow:0 0 12px rgba(255,180,80,.4);opacity:.65;transition:.2s}
@@ -504,7 +531,7 @@ export default function MeltyDipRoulette() {
         .pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:clamp(28px,4vw,40px);height:clamp(80px,14vw,120px);display:flex;justify-content:center}
         .pointer-inner{width:clamp(12px,1.6vw,18px);height:100%;background:linear-gradient(180deg,#ffce6a,#ff6f91);clip-path:polygon(50% 0%,90% 52%,50% 100%,10% 52%);box-shadow:0 12px 40px rgba(255,110,130,.45)}
 
-        .controls.under-wheel{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center;margin-top:14px}
+        .controls.under-wheel{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center;margin-top:2px;z-index:5}
         .controls.under-wheel button{appearance:none;border:none;border-radius:14px;padding:12px 14px;font-size:.95rem;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8b6e);color:#1d1d22;box-shadow:0 14px 36px rgba(0,0,0,.35);transition:.15s}
         .controls.under-wheel button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
         .status{display:flex;gap:10px;align-items:center;justify-content:flex-end}
@@ -519,17 +546,12 @@ export default function MeltyDipRoulette() {
         .inline-icon{width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
         .item-list strong{display:block;font-size:.95rem}
         .item-list p{margin:.2rem 0 0;font-size:.85rem;opacity:.76}
-
         .history{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:.9rem;max-height:180px;overflow-y:auto}
         .history li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 
         .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(15,18,40,.92);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:12px 24px;font-weight:700;letter-spacing:.04em;z-index:50;box-shadow:0 16px 40px rgba(0,0,0,.5)}
 
         .overlay{position:fixed;inset:0;display:grid;place-items:center;z-index:40;background:rgba(4,6,14,.72);backdrop-filter:blur(12px)}
-        .overlay.start .card,.overlay.summary .card{background:rgba(14,18,38,.9);border-radius:20px;border:1px solid rgba(255,255,255,.12);padding:clamp(28px,6vw,40px);width:min(90vw,520px);box-shadow:0 30px 80px rgba(0,0,0,.55)}
-        .player-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-        .player-grid button{font-size:1.4rem;font-weight:800;padding:18px 0;border-radius:16px;border:none;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8a65);color:#1d1d22;box-shadow:0 18px 42px rgba(0,0,0,.4);transition:.18s}
-        .player-grid button:hover{transform:translateY(-3px);box-shadow:0 24px 50px rgba(255,120,100,.38)}
         .overlay.face{background:radial-gradient(circle at 50% 40%, rgba(255,255,255,.08), transparent 70%)}
         .face-wrap{width:min(60vw,520px);animation:popIn .45s ease}
         .overlay.congrats{background:rgba(4,6,14,.82)}
