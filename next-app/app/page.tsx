@@ -12,7 +12,8 @@ type Item = {
   id: string;
   name: string;
   description: string;
-   icon: string; // ← 画像ファイル名を追加
+  emoji: string;      // 絵文字（フォールバック用）
+  icon: string; // ← 画像ファイル名を追加
   accent: string;
   face: FaceExpression;
 
@@ -21,12 +22,12 @@ type Result = { id: string; name: string; icon: string };
 
 /* ===== items (6種類) ===== */
 const ITEMS: Item[] = [
-  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', icon: '🥦', accent: '#5ed67d', face: 'cheer',   icon: 'veg.png' },
-  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           icon: '🍖', accent: '#ff7f7f', face: 'smile',   icon: 'pork.png' },
-  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         icon: '🥩', accent: '#f76367', face: 'smile',   icon: 'beef.png' },
-  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        icon: '🍗', accent: '#ff9e6e', face: 'wink',    icon: 'chicken.png' },
-  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       icon: '🥖', accent: '#ffd166', face: 'tongue',  icon: 'bagutte.png' },
-  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            icon: '🍤', accent: '#ff9472', face: 'havefun', icon: 'shrimp.png' },
+  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', emoji: '🥦', accent: '#5ed67d', face: 'cheer',   icon: '/img/bg/veg.png' },
+  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           icon: '🍖', accent: '#ff7f7f', face: 'smile',   icon: '/img/bg/pork.png' },
+  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         icon: '🥩', accent: '#f76367', face: 'smile',   icon: '/img/bg/beef.png' },
+  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        icon: '🍗', accent: '#ff9e6e', face: 'wink',    icon: '/img/bg/chicken.png' },
+  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       icon: '🥖', accent: '#ffd166', face: 'tongue',  icon: '/img/bg/bagutte.png' },
+  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            icon: '🍤', accent: '#ff9472', face: 'havefun', icon: '/img/bg/shrimp.png' },
 ];
 
 /* ===== geometry utils ===== */
