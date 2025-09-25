@@ -42,14 +42,16 @@ const FaceArt = ({ expression }: { expression: FaceExpression }) => {
     tongue: 'M120 188 C170 232 230 232 280 188 L276 220 C248 260 208 272 180 240 Z',
     havefun: 'M115 188 C160 238 240 238 285 188',
   };
-  const brow: Record<FaceExpression, { left: string; right: string }> = {
-    smile: { left: 'rotate(-6 140 120)', right: 'rotate(6 240 120)' },
-    cheer: { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
-    surprised: { left: 'translate(-4 -4)', right: 'translate(4 -4)' },
-    wink: { left: 'rotate(-12 140 110)', right: 'scale(1 .35) translate(0 140)' },
-    tongue: { left: 'rotate(-10 140 120)', right: 'rotate(10 240 120)' },
-    havefun: { left: 'rotate(-16 140 110)', right: 'rotate(16 240 110)' },
-  }[expression];
+// 使っている表情の列挙（既にあれば重複定義は不要）
+type FaceExpression = 'smile' | 'cheer' | 'surprised' | 'wink';
+
+// 眉の変形マップ（キー付きで定義し、satisfies で型を満たす）
+const brow = {
+  smile:     { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' },
+  cheer:     { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
+  surprised: { left: 'translate(-4 -4)',    right: 'translate(4 -4)' },
+  wink:      { left: 'rotate(-12 140 110)', right: 'scale(1.35) translate(0 140)' },
+} satisfies Record<FaceExpression, { left: string; right: string }>;
   const highlight = expression === 'havefun' ? '#fff4c1' : '#ffe7d1';
   return (
     <svg viewBox="0 0 360 360" className="face-art" role="img" aria-hidden>
