@@ -50,6 +50,12 @@ type FaceExpression =
   | 'tongue'
   | 'havefun';
 
+const [expression, setExpression] = useState<FaceExpression>('smile');
+
+const mouth: Record<FaceExpression, string> = { ... };
+
+const brow: Record<FaceExpression, { left: string; right: string } > = { ... };
+
 // 眉の変形マップ（キー付きで定義し、satisfies で型を満たす）
 const brow = {
   smile:     { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' },
@@ -72,9 +78,10 @@ const brow = {
       <ellipse cx="120" cy="150" rx="28" ry="36" fill="#fff" />
       <ellipse cx="240" cy="150" rx="28" ry="36" fill="#fff" />
       <circle cx="120" cy="152" r="12" fill="#3d2a18" />
-      <path d={mouth} stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill={expression === 'surprised' ? '#ff7770' : 'none'} />
-      <path d="M130 112 Q140 96 170 108" stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill="none" transform={brow.left} />
-      <path d="M210 108 Q240 96 250 114" stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill="none" transform={brow.right} />
+      <path d={mouth[expression]} strokeWidth="10" strokeLinecap="round"
+   fill={expression === 'surprised' ? '#ff7770' : 'none'} />
+     <path d="M130 112 0140 96 170 108" ... transform={brow[expression].left} />
+     <path d="M210 108 0240 96 256 114" ... transform={brow[expression].right} />
       <rect x="165" y="180" width="30" height="46" rx="14" fill="#ff4757" stroke="#862133" strokeWidth="4" />
       <circle cx="180" cy="212" r="58" fill="#ff6542" stroke="#9f2c26" strokeWidth="8" />
       <path d="M160 236 Q180 244 200 236" stroke="#ffd5d0" strokeWidth="10" strokeLinecap="round" fill="none" opacity="0.6" />
