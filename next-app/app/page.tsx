@@ -32,56 +32,71 @@ function describeArc(start: number, end: number, radius: number) {
   return `M 0 0 L ${s.x.toFixed(3)} ${s.y.toFixed(3)} A ${radius} ${radius} 0 ${large} 1 ${e.x.toFixed(3)} ${e.y.toFixed(3)} Z`;
 }
 
-/* ===== 顔アイコン（そのまま） ===== */
+/* ===== 顔アイコン ===== */
 const FaceArt = ({ expression }: { expression: FaceExpression }) => {
   const mouth: Record<FaceExpression, string> = {
     smile: 'M110 180 C160 220 220 220 270 180',
-    cheer: 'M112 188 C180 250 220 250 268 188',
-    surprised: 'M190 182 C170 182 155 198 155 218 C155 242 172 262 196 262 C220 262 236 244 236 218 C236 198 222 182 200 182 Z',
+    cheer: 'M112 188 C160 235 220 235 268 188',
+    surprised:
+      'M190 182 C170 182 155 198 155 218 C155 242 172 262 196 262 C220 262 236 244 236 218 C236 198 222 182 200 182 Z',
     wink: 'M115 198 C155 234 235 234 275 198',
-    tongue: 'M120 188 C170 232 230 232 280 188 L276 220 C248 260 208 272 180 240 Z',
+    tongue:
+      'M120 188 C170 232 230 232 280 188 L276 220 C248 260 208 272 180 240 Z',
     havefun: 'M115 188 C160 238 240 238 285 188',
   };
-type FaceExpression =
-  | 'smile'
-  | 'cheer'
-  | 'surprised'
-  | 'wink'
-  | 'tongue'
-  | 'havefun';
 
-const [expression, setExpression] = useState<FaceExpression>('smile');
+  const brow: Record<FaceExpression, { left: string; right: string }> = {
+    smile:     { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' },
+    cheer:     { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
+    surprised: { left: 'translate(-4 -4)',     right: 'translate(4 -4)' },
+    wink:      { left: 'rotate(-12 140 110)', right: 'scale(1.35) translate(0 140)' },
+    tongue:    { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' },
+    havefun:   { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
+  };
 
-const mouth: Record<FaceExpression, string> = { ... };
-
-const brow: Record<FaceExpression, { left: string; right: string } > = { ... };
-
-// 眉の変形マップ（キー付きで定義し、satisfies で型を満たす）
-const brow = {
-  smile:     { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' },
-  cheer:     { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
-  surprised: { left: 'translate(-4 -4)',    right: 'translate(4 -4)' },
-  wink:      { left: 'rotate(-12 140 110)', right: 'scale(1.35) translate(0 140)' },
-  tongue:    { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' }, // ← smile流用
-  havefun:   { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' }, // ← cheer流用
-} satisfies Record<FaceExpression, { left: string; right: string }>;
   const highlight = expression === 'havefun' ? '#fff4c1' : '#ffe7d1';
+
   return (
-    <svg viewBox="0 0 360 360" className="face-art" role="img" aria-hidden>
+    <svg viewBox="0 0 360 360" className="face-art" role="img" aria-hidden="true">
       <defs>
         <radialGradient id={`faceGradient-${expression}`} cx="50%" cy="35%" r="70%">
           <stop offset="0%" stopColor="#fff1c6" />
           <stop offset="100%" stopColor="#f3c669" />
         </radialGradient>
       </defs>
+
       <circle cx="180" cy="180" r="170" fill={`url(#faceGradient-${expression})`} stroke="#b88429" strokeWidth="8" />
       <ellipse cx="120" cy="150" rx="28" ry="36" fill="#fff" />
       <ellipse cx="240" cy="150" rx="28" ry="36" fill="#fff" />
       <circle cx="120" cy="152" r="12" fill="#3d2a18" />
-      <path d={mouth[expression]} strokeWidth="10" strokeLinecap="round"
-   fill={expression === 'surprised' ? '#ff7770' : 'none'} />
-     <path d="M130 112 0140 96 170 108" ... transform={brow[expression].left} />
-     <path d="M210 108 0240 96 256 114" ... transform={brow[expression].right} />
+      <circle cx="240" cy="152" r="12" fill="#3d2a18" />
+
+      <path
+        d={mouth[expression]}
+        stroke="#3d2a18"
+        strokeWidth="10"
+        strokeLinecap="round"
+        fill={expression === 'surprised' ? '#ff7770' : 'none'}
+      />
+      {/* eyebrows */}
+      <path
+        d="M130 110 Q140 96 170 108"
+        stroke="#3d2a18"
+        strokeWidth="10"
+        strokeLinecap="round"
+        fill="none"
+        transform={brow[expression].left}
+      />
+      <path
+        d="M210 108 Q240 96 256 114"
+        stroke="#3d2a18"
+        strokeWidth="10"
+        strokeLinecap="round"
+        fill="none"
+        transform={brow[expression].right}
+      />
+
+      {/* cheeks / rings */}
       <rect x="165" y="180" width="30" height="46" rx="14" fill="#ff4757" stroke="#862133" strokeWidth="4" />
       <circle cx="180" cy="212" r="58" fill="#ff6542" stroke="#9f2c26" strokeWidth="8" />
       <path d="M160 236 Q180 244 200 236" stroke="#ffd5d0" strokeWidth="10" strokeLinecap="round" fill="none" opacity="0.6" />
