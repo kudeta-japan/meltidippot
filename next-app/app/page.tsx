@@ -42,8 +42,13 @@ const FaceArt = ({ expression }: { expression: FaceExpression }) => {
     tongue: 'M120 188 C170 232 230 232 280 188 L276 220 C248 260 208 272 180 240 Z',
     havefun: 'M115 188 C160 238 240 238 285 188',
   };
-// 使っている表情の列挙（既にあれば重複定義は不要）
-type FaceExpression = 'smile' | 'cheer' | 'surprised' | 'wink';
+type FaceExpression =
+  | 'smile'
+  | 'cheer'
+  | 'surprised'
+  | 'wink'
+  | 'tongue'
+  | 'havefun';
 
 // 眉の変形マップ（キー付きで定義し、satisfies で型を満たす）
 const brow = {
@@ -51,6 +56,8 @@ const brow = {
   cheer:     { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
   surprised: { left: 'translate(-4 -4)',    right: 'translate(4 -4)' },
   wink:      { left: 'rotate(-12 140 110)', right: 'scale(1.35) translate(0 140)' },
+  tongue:    { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' }, // ← smile流用
+  havefun:   { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' }, // ← cheer流用
 } satisfies Record<FaceExpression, { left: string; right: string }>;
   const highlight = expression === 'havefun' ? '#fff4c1' : '#ffe7d1';
   return (
