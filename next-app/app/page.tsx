@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-/* ===== base path (for GitHub Pages) ===== */
-const prefix = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
-const img = (file: string) => `${prefix}/img/bg/${file}`;
+/* ===== assets helper (相対パスで安全) ===== */
+const asset = (file: string) => `img/bg/${file}`;
 
 /* ===== types ===== */
 type FaceExpression = 'smile' | 'cheer' | 'surprised' | 'wink' | 'tongue' | 'havefun';
@@ -13,10 +12,7 @@ type Item = {
   id: string;
   name: string;
   description: string;
-  /** 絵文字はフォールバック用（未使用なら入れなくてOK） */
-  emoji?: string;
-  /** /public/img/bg 配下のファイル名（例: "pork.png"） */
-  icon: string;
+  icon: string;             // public/img/bg のファイル名
   accent: string;
   face: FaceExpression;
 };
@@ -24,20 +20,20 @@ type Item = {
 type Result = { id: string; name: string; icon: string };
 
 /* ===== items (6種類) =====
-   ※ ファイル名は /public/img/bg にある実ファイル名と合わせてください */
+   ※ リポジトリの実ファイル名に合わせています。 */
 const ITEMS: Item[] = [
-  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', icon: 'veg.png',     accent: '#5ed67d', face: 'cheer' },
-  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           icon: 'pork.png',    accent: '#fff7f1', face: 'smile' },
-  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         icon: 'beef.png',    accent: '#f76367', face: 'smile' },
-  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        icon: 'chicken.png', accent: '#ff9e6e', face: 'wink' },
-  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       icon: 'bage.png',    accent: '#ffd166', face: 'tongue' },
-  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            icon: 'shrimp.png',  accent: '#ff9472', face: 'havefun' },
+  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', icon: 'vege.jpg',     accent: '#5ed67d', face: 'cheer' },
+  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           icon: 'pork.jpg',     accent: '#fff7f1', face: 'smile' },
+  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         icon: 'beef.jpg',     accent: '#f76367', face: 'smile' },
+  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        icon: 'chickhen.jpg', accent: '#ff9e6e', face: 'wink' },
+  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       icon: 'bage.jpg',     accent: '#ffd166', face: 'tongue' },
+  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            icon: 'shrimp.jpg',   accent: '#ff9472', face: 'havefun' },
 ];
 
 /* ===== geometry utils ===== */
 const SEGMENT_ANGLE = 360 / ITEMS.length;
-const toRadians = (deg: number) => (deg * Math.PI) / 180;
 const clampAngle = (deg: number) => ((deg % 360) + 360) % 360;
+const toRadians = (deg: number) => (deg * Math.PI) / 180;
 function polarToCartesian(radius: number, angle: number) {
   const rad = toRadians(angle - 90);
   return { x: radius * Math.cos(rad), y: radius * Math.sin(rad) };
@@ -49,27 +45,24 @@ function describeArc(start: number, end: number, radius: number) {
   return `M 0 0 L ${s.x.toFixed(3)} ${s.y.toFixed(3)} A ${radius} ${radius} 0 ${large} 1 ${e.x.toFixed(3)} ${e.y.toFixed(3)} Z`;
 }
 
-/* ===== 顔アイコン ===== */
+/* ===== 顔アイコン（そのまま） ===== */
 const FaceArt = ({ expression }: { expression: FaceExpression }) => {
   const mouth: Record<FaceExpression, string> = {
     smile: 'M110 180 C160 220 220 220 270 180',
     cheer: 'M112 188 C160 235 220 235 268 188',
-    surprised:
-      'M190 182 C170 182 155 198 155 218 C155 242 172 262 196 262 C220 262 236 244 236 218 C236 198 222 182 200 182 Z',
+    surprised: 'M190 182 C170 182 155 198 155 218 C155 242 172 262 196 262 C220 262 236 244 236 218 C236 198 222 182 200 182 Z',
     wink: 'M115 198 C155 234 235 234 275 198',
     tongue: 'M120 188 C170 232 230 232 280 188 L276 220 C248 260 208 272 180 240 Z',
     havefun: 'M115 188 C160 238 240 238 285 188',
   };
-
   const brow: Record<FaceExpression, { left: string; right: string }> = {
     smile:     { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' },
     cheer:     { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
-    surprised: { left: 'translate(-4 -4)',     right: 'translate(4 -4)' },
+    surprised: { left: 'translate(-4 -4)',    right: 'translate(4 -4)' },
     wink:      { left: 'rotate(-12 140 110)', right: 'scale(1.35) translate(0 140)' },
     tongue:    { left: 'rotate(-6 140 120)',  right: 'rotate(6 240 120)' },
     havefun:   { left: 'rotate(-12 140 110)', right: 'rotate(12 240 110)' },
   };
-
   const highlight = expression === 'havefun' ? '#fff4c1' : '#ffe7d1';
 
   return (
@@ -80,25 +73,14 @@ const FaceArt = ({ expression }: { expression: FaceExpression }) => {
           <stop offset="100%" stopColor="#f3c669" />
         </radialGradient>
       </defs>
-
       <circle cx="180" cy="180" r="170" fill={`url(#faceGradient-${expression})`} stroke="#b88429" strokeWidth="8" />
       <ellipse cx="120" cy="150" rx="28" ry="36" fill="#fff" />
       <ellipse cx="240" cy="150" rx="28" ry="36" fill="#fff" />
       <circle cx="120" cy="152" r="12" fill="#3d2a18" />
       <circle cx="240" cy="152" r="12" fill="#3d2a18" />
-
-      <path
-        d={mouth[expression]}
-        stroke="#3d2a18"
-        strokeWidth="10"
-        strokeLinecap="round"
-        fill={expression === 'surprised' ? '#ff7770' : 'none'}
-      />
-      {/* eyebrows */}
+      <path d={mouth[expression]} stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill={expression === 'surprised' ? '#ff7770' : 'none'} />
       <path d="M130 110 Q140 96 170 108" stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill="none" transform={brow[expression].left} />
       <path d="M210 108 Q240 96 256 114" stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill="none" transform={brow[expression].right} />
-
-      {/* cheeks / rings */}
       <rect x="165" y="180" width="30" height="46" rx="14" fill="#ff4757" stroke="#862133" strokeWidth="4" />
       <circle cx="180" cy="212" r="58" fill="#ff6542" stroke="#9f2c26" strokeWidth="8" />
       <path d="M160 236 Q180 244 200 236" stroke="#ffd5d0" strokeWidth="10" strokeLinecap="round" fill="none" opacity="0.6" />
@@ -120,7 +102,7 @@ const CongratsCard = () => (
   </div>
 );
 
-/* ===== audio helpers ===== */
+/* ===== audio ===== */
 function createAudioContext() {
   if (typeof window === 'undefined') return null;
   try {
@@ -149,16 +131,19 @@ export default function MeltyDipRoulette() {
   const toastTimerRef = useRef<number>();
   const [face, setFace] = useState<FaceExpression | null>(null);
   const faceTimerRef = useRef<number>();
-  const [showStart, setShowStart] = useState(true);
   const [showSummary, setShowSummary] = useState(false);
   const [showCongrats, setShowCongrats] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState<number | null>(null);
   const highlightTimerRef = useRef<number>();
   const [muted, setMuted] = useState(false);
   const audioRef = useRef<AudioContext | null>(null);
-
   const [flashImg, setFlashImg] = useState<string | null>(null);
   const flashTimerRef = useRef<number>();
+
+  // 追加: 自動スピン & ウォッチドッグ用
+  const autoSpunRef = useRef(false);
+  const spinStartTimeRef = useRef(0);
+  const lastMoveAtRef = useRef(performance.now());
 
   const ensureAudio = useCallback(() => {
     if (muted) return null;
@@ -215,7 +200,7 @@ export default function MeltyDipRoulette() {
     return () => { document.body.classList.remove('meltydip-body'); };
   }, []);
 
-  /* === helpers for index/angle === */
+  /* === helpers === */
   const getPointerAngle = useCallback((value: number) => clampAngle(360 - clampAngle(value)), []);
   const indexFromRotation = useCallback((value: number) => {
     const pointerAngle = getPointerAngle(value);
@@ -223,13 +208,10 @@ export default function MeltyDipRoulette() {
   }, [getPointerAngle]);
 
   /* === controls === */
-  const startSpin = () => {
+  const startSpin = useCallback(() => {
     if (modeRef.current !== 'idle') return;
 
-    // オーバーレイが出ているなら閉じる
-    if (showStart) setShowStart(false);
-
-    // 残回数が0なら1回ぶんシードして回せるようにする
+    // 残回数0でも1回は回せるようにする
     if (spinsLeftRef.current <= 0) {
       setSpinsLeft(1);
       spinsLeftRef.current = 1;
@@ -239,9 +221,11 @@ export default function MeltyDipRoulette() {
     velocityRef.current = 0.1;
     modeRef.current = 'spinning';
     setMode('spinning');
-  };
+    spinStartTimeRef.current = performance.now();
+    lastMoveAtRef.current = performance.now();
+  }, [showToastMessage]);
 
-  const stopSpin = () => {
+  const stopSpin = useCallback(() => {
     if (modeRef.current !== 'spinning') return;
     const current = rotationRef.current;
     const idx = indexFromRotation(current);
@@ -262,9 +246,8 @@ export default function MeltyDipRoulette() {
     stopDurationRef.current = 2.8 + Math.random() * 0.6;
     modeRef.current = 'stopping';
     setMode('stopping');
-  };
+  }, [indexFromRotation]);
 
-  /* === finishStop（※useEffectより前に定義） === */
   const finishStop = useCallback(() => {
     modeRef.current = 'idle';
     setMode('idle');
@@ -285,7 +268,7 @@ export default function MeltyDipRoulette() {
     setResults((prev) => [...prev, { id: item.id, name: item.name, icon: item.icon }]);
 
     // 停止直後のフラッシュ画像
-    setFlashImg(img(item.icon));
+    setFlashImg(asset(item.icon));
     if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
     flashTimerRef.current = window.setTimeout(() => setFlashImg(null), 900);
 
@@ -302,7 +285,7 @@ export default function MeltyDipRoulette() {
     }
   }, [indexFromRotation, playResultChime, showToastMessage]);
 
-  /* === RAF loop === */
+  /* === RAF loop + ウォッチドッグ === */
   useEffect(() => {
     let frame = 0;
     let last = performance.now();
@@ -312,10 +295,19 @@ export default function MeltyDipRoulette() {
       last = now;
 
       if (modeRef.current === 'spinning') {
+        // 加速
         velocityRef.current = Math.min(18, velocityRef.current + 24 * dt);
         const next = rotationRef.current + velocityRef.current * dt;
+        if (next !== rotationRef.current) lastMoveAtRef.current = now; // 動いた
         setRotation(next);
         rotationRef.current = next;
+
+        // もし1秒以上ほぼ動いてなければ最小速度を確保（安全装置）
+        if (now - lastMoveAtRef.current > 1000) {
+          velocityRef.current = Math.max(4, velocityRef.current + 2);
+        }
+        // 10秒以上回っていたら自動で止める（見栄え用）
+        if (now - spinStartTimeRef.current > 10000) stopSpin();
       } else if (modeRef.current === 'stopping') {
         const elapsed = (now - stopStartTimeRef.current) / 1000;
         const t = Math.min(1, elapsed / stopDurationRef.current);
@@ -331,9 +323,22 @@ export default function MeltyDipRoulette() {
 
     frame = window.requestAnimationFrame(step);
     return () => window.cancelAnimationFrame(frame);
-  }, [finishStop]);
+  }, [finishStop, stopSpin]);
 
-  /* === unmount cleanup === */
+  /* === 初回オートスピン（必ず1回） === */
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (!autoSpunRef.current && modeRef.current === 'idle') {
+        autoSpunRef.current = true;
+        startSpin();
+        // 2.2秒後に自動停止（演出のため）
+        window.setTimeout(() => stopSpin(), 2200);
+      }
+    }, 800);
+    return () => window.clearTimeout(t);
+  }, [startSpin, stopSpin]);
+
+  /* === cleanup === */
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
@@ -343,7 +348,6 @@ export default function MeltyDipRoulette() {
     };
   }, []);
 
-  /* === UI helpers === */
   const ledBulbs = useMemo(() => {
     const total = 48;
     return Array.from({ length: total }, (_, i) => ({ index: i, angle: i * (360 / total) }));
@@ -402,12 +406,11 @@ export default function MeltyDipRoulette() {
                 })}
               </svg>
 
-              {/* ラベル内のアイコン画像 */}
               <div className="labels">
                 {ITEMS.map((item, index) => (
                   <div key={item.id} className="label" style={{ transform: `rotate(${index * SEGMENT_ANGLE}deg)` }}>
                     <div className="label-inner" style={{ transform: `rotate(${-index * SEGMENT_ANGLE}deg)` }}>
-                      <img className="icon" src={img(item.icon)} alt="" draggable={false} />
+                      <img className="icon" src={asset(item.icon)} alt="" draggable={false} />
                       <span className="name">{item.name}</span>
                     </div>
                   </div>
@@ -421,8 +424,9 @@ export default function MeltyDipRoulette() {
           </div>
 
           <div className="controls under-wheel">
-            <button onClick={startSpin} disabled={mode !== 'idle'}>回す 🎡</button>
-            <button onClick={stopSpin} disabled={mode !== 'spinning'}>止める ⏹</button>
+            {/* 常に押せる（内部でidle判定） */}
+            <button onClick={startSpin}>回す 🎡</button>
+            <button onClick={stopSpin}>止める ⏹</button>
             <div className="status">
               <span className="label">残り</span><strong>{spinsLeft > 0 ? spinsLeft : '--'} 回</strong>
               <span className="now">いま：{ITEMS[activeIndex]?.name ?? '—'}</span>
@@ -437,7 +441,7 @@ export default function MeltyDipRoulette() {
               {ITEMS.map((it) => (
                 <li key={it.id}>
                   <span className="dot" style={{ background: it.accent }} />
-                  <img className="inline-icon" src={img(it.icon)} alt="" />
+                  <img className="inline-icon" src={asset(it.icon)} alt="" />
                   <div><strong>{it.name}</strong><p>{it.description}</p></div>
                 </li>
               ))}
@@ -450,7 +454,7 @@ export default function MeltyDipRoulette() {
               <ul className="history">
                 {results.slice().reverse().map((r, i) => (
                   <li key={`${r.id}-${i}`}>
-                    <img src={img(r.icon)} alt="" className="icon xs" />
+                    <img src={asset(r.icon)} alt="" className="icon xs" />
                     {r.name}
                   </li>
                 ))}
@@ -461,7 +465,7 @@ export default function MeltyDipRoulette() {
       </section>
 
       {toast && <div className="toast">{toast}</div>}
-      {face && (<div className="overlay face"><div className="face-wrap"><FaceArt expression={face} /></div></div>)}
+      {face && (<div className="overlay face"><div className="face-wrap"><FaceArt expression="havefun" /></div></div>)}
       {showCongrats && (<div className="overlay congrats"><CongratsCard /></div>)}
 
       {showSummary && (
@@ -481,7 +485,7 @@ export default function MeltyDipRoulette() {
                   return rows.length
                     ? rows.map((e) => (
                         <tr key={e.name}>
-                          <td><img src={img(e.icon)} alt="" className="icon xs" /> {e.name}</td>
+                          <td><img src={asset(e.icon)} alt="" className="icon xs" /> {e.name}</td>
                           <td style={{ textAlign: 'right' }}>{e.count}</td>
                         </tr>
                       ))
@@ -490,32 +494,30 @@ export default function MeltyDipRoulette() {
               </tbody>
             </table>
             <div className="summary-actions">
-              <button onClick={() => { setShowSummary(false); setShowStart(true); }}>もう一度</button>
-              <button className="ghost" onClick={() => setShowSummary(false)}>閉じる</button>
+              <button onClick={() => setShowSummary(false)}>閉じる</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 停止直後のフラッシュ表示 */}
       {flashImg && (
         <div className="flash" aria-hidden>
           <img src={flashImg} alt="" />
         </div>
       )}
 
-      {/* 背景に top.png を敷く（GH Pages 対応で prefix 付き） */}
+      {/* 背景に top.png を敷く（相対パス） */}
       <style jsx global>{`
         body.meltydip-body {
           background:
             radial-gradient(circle at 20% 20%, rgba(255,163,102,.16), transparent 50%),
             radial-gradient(circle at 80% 0%, rgba(255,230,140,.18), transparent 55%),
             linear-gradient(180deg, #070713, #0c0c1f),
-            url('${img('top.png')}') center/cover no-repeat fixed;
+            url('${asset('top.png')}') center/cover no-repeat fixed;
         }
       `}</style>
 
-      {/* 画面内スタイル */}
+      {/* スタイル（画像アイコン対応の最小追加） */}
       <style jsx>{`
         .meltydip-app{position:relative;min-height:100vh;overflow:hidden;color:#eef2ff}
         .backdrop{position:absolute;inset:0;pointer-events:none}
@@ -526,7 +528,7 @@ export default function MeltyDipRoulette() {
           filter:blur(120px);opacity:.65}
         .hero-copy{position:absolute;top:clamp(48px,8vw,80px);left:clamp(40px,6vw,120px);max-width:min(420px,40vw)}
         .hero-copy .eyebrow{display:inline-flex;gap:.4rem;padding:.4rem .8rem;border-radius:999px;background:rgba(255,209,102,.16);color:#ffdd83;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.75rem}
-        .hero-copy h1{margin:.8rem 0 .4rem;font-size:clamp(32px,4vw,58px);letter-spacing:-.01em}
+        .hero-copy h1{margin:.8rem 0 .4rem;font-size:clamp(32px,4vw,58px)}
         .hero-copy p{margin:0;line-height:1.7;color:rgba(230,235,255,.8);font-size:.98rem}
         .hero-face{position:absolute;top:clamp(60px,16vw,160px);right:clamp(40px,8vw,140px);width:min(320px,32vw);opacity:.78}
         .hero-face :global(.face-art){width:100%;height:auto}
@@ -539,14 +541,14 @@ export default function MeltyDipRoulette() {
         .led.spin{animation:ledPulse 1.4s linear infinite}
         .led.highlight{opacity:1;box-shadow:0 0 18px rgba(255,230,180,.85),0 0 40px rgba(255,160,60,.45)}
 
-        .wheel{position:relative;width:100%;height:100%;border-radius:50%;backdrop-filter:blur(8px);background:rgba(14,18,40,.4);border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 80px rgba(0,0,0,.55);transition:transform .18s ease-out}
+        .wheel{position:relative;width:100%;height:100%;border-radius:50%;backdrop-filter:blur(8px);background:rgba(14,18,40,.4);border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 80px rgba(0,0,0,.55)}
         .wheel svg{position:absolute;inset:clamp(26px,4vw,38px);width:calc(100% - clamp(52px,8vw,76px));height:calc(100% - clamp(52px,8vw,76px))}
         .segment{transition:filter .3s ease, opacity .3s ease}
         .segment.highlight{filter:brightness(1.25) saturate(1.2)}
         .labels{position:absolute;inset:clamp(26px,4vw,38px);display:grid;place-items:center;pointer-events:none}
         .label{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center}
         .label-inner{display:grid;place-items:center;transform-origin:center;translate:0 clamp(-44%,-16vw,-48%);text-align:center;gap:.3rem}
-        .label .icon{ width:clamp(22px,3vw,36px); height:auto; display:block; filter:drop-shadow(0 2px 6px rgba(0,0,0,.35)) }
+        .label .icon{width:clamp(22px,3vw,36px);height:auto;display:block;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
         .label .name{font-size:clamp(.68rem,1.6vw,.85rem);letter-spacing:.02em;background:rgba(10,12,24,.68);padding:.3rem .6rem;border-radius:999px;border:1px solid rgba(255,255,255,.16)}
 
         .hub{position:absolute;inset:clamp(130px,22vw,180px);border-radius:50%;background:radial-gradient(circle at 50% 30%, rgba(255,209,120,.26), rgba(255,120,90,.1));border:2px solid rgba(255,255,255,.18);display:grid;place-items:center;text-align:center;gap:.2rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,244,220,.9)}
@@ -556,7 +558,6 @@ export default function MeltyDipRoulette() {
 
         .controls.under-wheel{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center;margin-top:14px}
         .controls.under-wheel button{appearance:none;border:none;border-radius:14px;padding:12px 14px;font-size:.95rem;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8b6e);color:#1d1d22;box-shadow:0 14px 36px rgba(0,0,0,.35);transition:.15s}
-        .controls.under-wheel button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
         .status{display:flex;gap:10px;align-items:center;justify-content:flex-end}
         .status .label{opacity:.75}
 
@@ -571,44 +572,4 @@ export default function MeltyDipRoulette() {
         .item-list p{margin:.2rem 0 0;font-size:.85rem;opacity:.76}
 
         .history{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:.9rem;max-height:180px;overflow-y:auto}
-        .history li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-        .history .icon.xs{ width:16px; height:16px; margin-right:6px }
-
-        .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(15,18,40,.92);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:12px 24px;font-weight:700;letter-spacing:.04em;z-index:50;box-shadow:0 16px 40px rgba(0,0,0,.5)}
-
-        .overlay{position:fixed;inset:0;display:grid;place-items:center;z-index:40;background:rgba(4,6,14,.72);backdrop-filter:blur(12px)}
-        .overlay.start .card,.overlay.summary .card{background:rgba(14,18,38,.9);border-radius:20px;border:1px solid rgba(255,255,255,.12);padding:clamp(28px,6vw,40px);width:min(90vw,520px);box-shadow:0 30px 80px rgba(0,0,0,.55)}
-        .player-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-        .player-grid button{font-size:1.4rem;font-weight:800;padding:18px 0;border-radius:16px;border:none;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8a65);color:#1d1d22;box-shadow:0 18px 42px rgba(0,0,0,.4);transition:.18s}
-        .player-grid button:hover{transform:translateY(-3px);box-shadow:0 24px 50px rgba(255,120,100,.38)}
-        .overlay.face{background:radial-gradient(circle at 50% 40%, rgba(255,255,255,.08), transparent 70%)}
-        .face-wrap{width:min(60vw,520px);animation:popIn .45s ease}
-        .overlay.congrats{background:rgba(4,6,14,.82)}
-        .congrats-card{position:relative;background:radial-gradient(circle at 50% 30%, rgba(255,209,120,.18), rgba(10,12,24,.94));border-radius:24px;padding:48px 60px;border:1px solid rgba(255,255,255,.16);text-align:center;box-shadow:0 30px 90px rgba(0,0,0,.55)}
-        .congrats-card .badge{display:inline-flex;align-items:center;justify-content:center;padding:.7rem 1.4rem;border-radius:999px;background:linear-gradient(135deg,#ffd86b,#ff8b6e);color:#1d1d24;font-weight:800;letter-spacing:.08em;margin-bottom:16px}
-        .congrats-card p{margin:0;color:rgba(235,238,255,.85);font-size:1rem}
-        .congrats-card .spark{position:absolute;inset:0;border-radius:inherit;background:conic-gradient(from 180deg, rgba(255,255,255,.12), transparent 30%, rgba(255,255,255,.12) 60%, transparent 90%);mix-blend-mode:screen;animation:rotate 8s linear infinite;opacity:.45}
-        .congrats-card .spark.big{animation-duration:12s;opacity:.25}
-
-        .overlay.summary table{width:100%;border-collapse:collapse;margin-top:16px;font-size:.95rem;background:rgba(255,255,255,.04);border-radius:14px;overflow:hidden}
-        .overlay.summary th,.overlay.summary td{text-align:left;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
-        .overlay.summary th:last-child,.overlay.summary td:last-child{text-align:right}
-        .overlay.summary tr:last-child td{border-bottom:none}
-        .summary-actions{margin-top:18px;display:flex;gap:10px}
-        .summary-actions button{padding:12px 18px;border-radius:14px;border:none;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8a65);color:#1d1d24;box-shadow:0 14px 36px rgba(0,0,0,.35)}
-        .summary-actions .ghost{background:rgba(20,24,42,.86);color:rgba(240,244,255,.9);border:1px solid rgba(255,255,255,.14);box-shadow:none}
-
-        .flash{position:fixed;inset:0;display:grid;place-items:center;z-index:60;pointer-events:none;background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.08), transparent 60%);animation:flashFade .9s ease forwards}
-        .flash img{width:min(30vw,240px);height:auto;object-fit:contain;filter:drop-shadow(0 12px 40px rgba(0,0,0,.5))}
-
-        @keyframes ledPulse{0%,100%{opacity:.45;box-shadow:0 0 12px rgba(255,180,80,.35)}50%{opacity:.95;box-shadow:0 0 20px rgba(255,200,140,.85)}}
-        @keyframes popIn{0%{transform:scale(.86);opacity:0}100%{transform:scale(1);opacity:1}}
-        @keyframes rotate{to{transform:rotate(360deg)}}
-        @keyframes flashFade{0%{opacity:0}10%{opacity:1}80%{opacity:.9}100%{opacity:0}}
-
-        @media (max-width:1100px){.stage{grid-template-columns:1fr;padding:clamp(120px,16vw,160px) clamp(20px,4vw,36px) 60px}.side-panel{order:-1}.hero-face{opacity:.55}}
-        @media (max-width:720px){.hero-copy{left:20px;right:20px;max-width:none}.hero-face{display:none}.wheel-wrapper{width:min(86vw,420px)}.controls.under-wheel{grid-template-columns:repeat(2,minmax(0,1fr))}.panel-card{padding:16px}.item-list li{grid-template-columns:12px 40px 1fr}}
-      `}</style>
-    </main>
-  );
-}
+        .history li{display:flex;gap:8px;align-items:center;padding:6px 
