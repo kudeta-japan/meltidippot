@@ -2,32 +2,36 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-/* ===== base path (GH Pages 対応) ===== */
+/* ===== base path (for GitHub Pages) ===== */
 const prefix = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const img = (file: string) => `${prefix}/img/bg/${file}`;
 
 /* ===== types ===== */
 type FaceExpression = 'smile' | 'cheer' | 'surprised' | 'wink' | 'tongue' | 'havefun';
+
 type Item = {
   id: string;
   name: string;
   description: string;
-  emoji: string;      // 絵文字（フォールバック用）
-  icon: string; // ← 画像ファイル名を追加
+  /** 絵文字はフォールバック用（未使用なら入れなくてOK） */
+  emoji?: string;
+  /** /public/img/bg 配下のファイル名（例: "pork.png"） */
+  icon: string;
   accent: string;
   face: FaceExpression;
-
 };
+
 type Result = { id: string; name: string; icon: string };
 
-/* ===== items (6種類) ===== */
+/* ===== items (6種類) =====
+   ※ ファイル名は /public/img/bg にある実ファイル名と合わせてください */
 const ITEMS: Item[] = [
-  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', emoji: '🥦', accent: '#5ed67d', face: 'cheer',   icon: '/img/bg/veg.png' },
-  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           icon: '🍖', accent: '#ff7f7f', face: 'smile',   icon: '/img/bg/pork.png' },
-  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         icon: '🥩', accent: '#f76367', face: 'smile',   icon: '/img/bg/beef.png' },
-  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        icon: '🍗', accent: '#ff9e6e', face: 'wink',    icon: '/img/bg/chicken.png' },
-  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       icon: '🥖', accent: '#ffd166', face: 'tongue',  icon: '/img/bg/bagutte.png' },
-  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            icon: '🍤', accent: '#ff9472', face: 'havefun', icon: '/img/bg/shrimp.png' },
+  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', icon: 'veg.png',     accent: '#5ed67d', face: 'cheer' },
+  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           icon: 'pork.png',    accent: '#fff7f1', face: 'smile' },
+  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         icon: 'beef.png',    accent: '#f76367', face: 'smile' },
+  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        icon: 'chicken.png', accent: '#ff9e6e', face: 'wink' },
+  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       icon: 'bage.png',    accent: '#ffd166', face: 'tongue' },
+  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            icon: 'shrimp.png',  accent: '#ff9472', face: 'havefun' },
 ];
 
 /* ===== geometry utils ===== */
@@ -273,12 +277,12 @@ export default function MeltyDipRoulette() {
     highlightTimerRef.current = window.setTimeout(() => setHighlightIdx(null), 1600);
 
     playResultChime();
-    showToastMessage(`${item.emoji} ${item.name}！`);
+    showToastMessage(`${item.name}！`);
     setFace(item.face);
     if (faceTimerRef.current) window.clearTimeout(faceTimerRef.current);
     faceTimerRef.current = window.setTimeout(() => setFace(null), 1600);
 
-    setResults((prev) => [...prev, { id: item.id, name: item.name, emoji: item.emoji }]);
+    setResults((prev) => [...prev, { id: item.id, name: item.name, icon: item.icon }]);
 
     // 停止直後のフラッシュ画像
     setFlashImg(img(item.icon));
@@ -356,8 +360,6 @@ export default function MeltyDipRoulette() {
   return (
     <main className="meltydip-app">
       <div className="backdrop">
-        {/* 背景写真 */}
-        <div className="bg-photo" style={{ backgroundImage: `url(${img('top.png')})` }} aria-hidden />
         <div className="blur" />
         <div className="hero-copy">
           <span className="eyebrow">Cheese Wonderland Special</span>
@@ -400,12 +402,12 @@ export default function MeltyDipRoulette() {
                 })}
               </svg>
 
-              {/* ← 絵文字の代わりにアイコン画像を表示 */}
+              {/* ラベル内のアイコン画像 */}
               <div className="labels">
                 {ITEMS.map((item, index) => (
                   <div key={item.id} className="label" style={{ transform: `rotate(${index * SEGMENT_ANGLE}deg)` }}>
                     <div className="label-inner" style={{ transform: `rotate(${-index * SEGMENT_ANGLE}deg)` }}>
-                      <img className="emoji-icon" src={img(item.icon)} alt={item.name} draggable={false} />
+                      <img className="icon" src={img(item.icon)} alt="" draggable={false} />
                       <span className="name">{item.name}</span>
                     </div>
                   </div>
@@ -446,7 +448,12 @@ export default function MeltyDipRoulette() {
             <div className="panel-card">
               <h2>ヒット履歴</h2>
               <ul className="history">
-                {results.slice().reverse().map((r, i) => (<li key={`${r.id}-${i}`}><span>{r.emoji}</span>{r.name}</li>))}
+                {results.slice().reverse().map((r, i) => (
+                  <li key={`${r.id}-${i}`}>
+                    <img src={img(r.icon)} alt="" className="icon xs" />
+                    {r.name}
+                  </li>
+                ))}
               </ul>
             </div>
           )}
@@ -456,17 +463,29 @@ export default function MeltyDipRoulette() {
       {toast && <div className="toast">{toast}</div>}
       {face && (<div className="overlay face"><div className="face-wrap"><FaceArt expression={face} /></div></div>)}
       {showCongrats && (<div className="overlay congrats"><CongratsCard /></div>)}
+
       {showSummary && (
         <div className="overlay summary">
           <div className="card">
             <h2>結果まとめ</h2>
-            <table><thead><tr><th>メニュー</th><th>回数</th></tr></thead>
+            <table>
+              <thead><tr><th>メニュー</th><th>回数</th></tr></thead>
               <tbody>
                 {(() => {
-                  const map = new Map<string, { name: string; count: number; emoji: string }>();
-                  results.forEach((r) => { if (!map.has(r.id)) map.set(r.id, { name: r.name, count: 0, emoji: r.emoji }); map.get(r.id)!.count += 1; });
+                  const map = new Map<string, { name: string; count: number; icon: string }>();
+                  results.forEach((r) => {
+                    if (!map.has(r.id)) map.set(r.id, { name: r.name, count: 0, icon: r.icon });
+                    map.get(r.id)!.count += 1;
+                  });
                   const rows = Array.from(map.values());
-                  return rows.length ? rows.map((e) => <tr key={e.name}><td>{e.emoji} {e.name}</td><td>{e.count}</td></tr>) : <tr><td colSpan={2}>該当なし</td></tr>;
+                  return rows.length
+                    ? rows.map((e) => (
+                        <tr key={e.name}>
+                          <td><img src={img(e.icon)} alt="" className="icon xs" /> {e.name}</td>
+                          <td style={{ textAlign: 'right' }}>{e.count}</td>
+                        </tr>
+                      ))
+                    : <tr><td colSpan={2}>該当なし</td></tr>;
                 })()}
               </tbody>
             </table>
@@ -485,24 +504,21 @@ export default function MeltyDipRoulette() {
         </div>
       )}
 
-      {/* 画面内スタイル（既存の見た目を踏襲＋画像対応） */}
- <style jsx global>{`
-  body.meltydip-body {
-    background:
-      radial-gradient(circle at 20% 20%, rgba(255,163,102,.16), transparent 50%),
-      radial-gradient(circle at 80% 0%, rgba(255,230,140,.18), transparent 55%),
-      linear-gradient(180deg, #070713, #0c0c1f),
-      url('img/bg/top.png'); /* ← ここを相対パスに */
-    background-size: auto, auto, auto, cover;
-    background-repeat: no-repeat;
-    background-position: center top;
-    background-attachment: fixed;
-  }
-`}</style>
+      {/* 背景に top.png を敷く（GH Pages 対応で prefix 付き） */}
+      <style jsx global>{`
+        body.meltydip-body {
+          background:
+            radial-gradient(circle at 20% 20%, rgba(255,163,102,.16), transparent 50%),
+            radial-gradient(circle at 80% 0%, rgba(255,230,140,.18), transparent 55%),
+            linear-gradient(180deg, #070713, #0c0c1f),
+            url('${img('top.png')}') center/cover no-repeat fixed;
+        }
+      `}</style>
+
+      {/* 画面内スタイル */}
       <style jsx>{`
-        .meltydip-app{position:relative;min-height:100vh;overflow:hidden}
+        .meltydip-app{position:relative;min-height:100vh;overflow:hidden;color:#eef2ff}
         .backdrop{position:absolute;inset:0;pointer-events:none}
-        .bg-photo{position:absolute;inset:0;background:center/cover no-repeat;filter:brightness(.5)}
         .backdrop .blur{position:absolute;inset:-40px;background:
           radial-gradient(circle at 30% 20%, rgba(255,180,120,.22), transparent 50%),
           radial-gradient(circle at 90% 15%, rgba(255,90,130,.18), transparent 55%),
@@ -530,14 +546,9 @@ export default function MeltyDipRoulette() {
         .labels{position:absolute;inset:clamp(26px,4vw,38px);display:grid;place-items:center;pointer-events:none}
         .label{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center}
         .label-inner{display:grid;place-items:center;transform-origin:center;translate:0 clamp(-44%,-16vw,-48%);text-align:center;gap:.3rem}
-        .emoji-icon{width:clamp(28px,4vw,44px);height:auto;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+        .label .icon{ width:clamp(22px,3vw,36px); height:auto; display:block; filter:drop-shadow(0 2px 6px rgba(0,0,0,.35)) }
         .label .name{font-size:clamp(.68rem,1.6vw,.85rem);letter-spacing:.02em;background:rgba(10,12,24,.68);padding:.3rem .6rem;border-radius:999px;border:1px solid rgba(255,255,255,.16)}
-        
-  /* ←このあたりに追記 */
-  .label .icon{ width:clamp(22px,3vw,36px); height:auto; display:block }
-  .item-list .icon{ width:20px; height:20px; vertical-align:-4px; margin-right:6px }
-  .item-list .icon.sm{ width:18px; height:18px }
-  .history .icon.xs{ width:16px; height:16px; margin-right:6px }
+
         .hub{position:absolute;inset:clamp(130px,22vw,180px);border-radius:50%;background:radial-gradient(circle at 50% 30%, rgba(255,209,120,.26), rgba(255,120,90,.1));border:2px solid rgba(255,255,255,.18);display:grid;place-items:center;text-align:center;gap:.2rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,244,220,.9)}
         .hub-title{font-size:clamp(.72rem,2vw,1.2rem)} .hub-sub{font-size:clamp(.6rem,1.8vw,.9rem)}
         .pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:clamp(28px,4vw,40px);height:clamp(80px,14vw,120px);display:flex;justify-content:center}
@@ -558,8 +569,10 @@ export default function MeltyDipRoulette() {
         .inline-icon{width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
         .item-list strong{display:block;font-size:.95rem}
         .item-list p{margin:.2rem 0 0;font-size:.85rem;opacity:.76}
+
         .history{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:.9rem;max-height:180px;overflow-y:auto}
         .history li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+        .history .icon.xs{ width:16px; height:16px; margin-right:6px }
 
         .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(15,18,40,.92);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:12px 24px;font-weight:700;letter-spacing:.04em;z-index:50;box-shadow:0 16px 40px rgba(0,0,0,.5)}
 
