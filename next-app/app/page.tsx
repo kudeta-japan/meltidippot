@@ -281,37 +281,37 @@ export default function MeltyDipRoulette() {
     }
   }, [indexFromRotation, playResultChime, showToastMessage]);
 
-  /* === RAF loop === */
-  useEffect(() => {
-    let frame = 0;
-    let last = performance.now();
+/* === RAF loop === */
+useEffect(() => {
+  let frame = 0;
+  let last = performance.now();
 
-    const step = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
+  const step = (now: number) => {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
 
-      if (modeRef.current === 'spinning') {
-        velocityRef.current = Math.min(18, velocityRef.current + 24 * dt);
-        const next = rotationRef.current + velocityRef.current * dt;
-        setRotation(next);
-        rotationRef.current = next;
-      } else if (modeRef.current === 'stopping') {
-        const elapsed = (now - stopStartTimeRef.current) / 1000;
-        const t = Math.min(1, elapsed / stopDurationRef.current);
-        const eased = 1 - Math.pow(1 - t, 3);
-        const value = stopStartRef.current + (stopTargetRef.current - stopStartRef.current) * eased;
-        setRotation(value);
-        rotationRef.current = value;
-        if (t >= 1) finishStop();
-      }
-
-      frame = window.requestAnimationFrame(step);
-    };
+    if (modeRef.current === 'spinning') {
+      velocityRef.current = Math.min(18, velocityRef.current + 24 * dt);
+      const next = rotationRef.current + velocityRef.current * dt;
+      setRotation(next);
+      rotationRef.current = next;
+    } else if (modeRef.current === 'stopping') {
+      const elapsed = (now - stopStartTimeRef.current) / 1000;
+      const t = Math.min(1, elapsed / stopDurationRef.current);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const value = stopStartRef.current + (stopTargetRef.current - stopStartRef.current) * eased;
+      setRotation(value);
+      rotationRef.current = value;
+      if (t >= 1) finishStop();
+    }
 
     frame = window.requestAnimationFrame(step);
-    return () => window.cancelAnimationFrame(frame);
-  }, [finishStop]);
+  };
 
+  frame = window.requestAnimationFrame(step);
+  return () => window.cancelAnimationFrame(frame);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []); // ← 依存配列は空にする
   /* === unmount cleanup === */
   useEffect(() => {
     return () => {
