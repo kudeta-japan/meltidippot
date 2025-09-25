@@ -12,21 +12,21 @@ type Item = {
   id: string;
   name: string;
   description: string;
-  emoji: string;
+   icon: string; // ← 画像ファイル名を追加
   accent: string;
   face: FaceExpression;
-  icon: string; // ← 画像ファイル名を追加
+
 };
-type Result = { id: string; name: string; emoji: string };
+type Result = { id: string; name: string; icon: string };
 
 /* ===== items (6種類) ===== */
 const ITEMS: Item[] = [
-  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', emoji: '🥦', accent: '#5ed67d', face: 'cheer',   icon: 'veg.png' },
-  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           emoji: '🍖', accent: '#ff7f7f', face: 'smile',   icon: 'pork.png' },
-  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         emoji: '🥩', accent: '#f76367', face: 'smile',   icon: 'beef.png' },
-  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        emoji: '🍗', accent: '#ff9e6e', face: 'wink',    icon: 'chicken.png' },
-  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       emoji: '🥖', accent: '#ffd166', face: 'tongue',  icon: 'bage.png' },
-  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            emoji: '🍤', accent: '#ff9472', face: 'havefun', icon: 'shrinp.png' },
+  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', icon: '🥦', accent: '#5ed67d', face: 'cheer',   icon: 'veg.png' },
+  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           icon: '🍖', accent: '#ff7f7f', face: 'smile',   icon: 'pork.png' },
+  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         icon: '🥩', accent: '#f76367', face: 'smile',   icon: 'beef.png' },
+  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        icon: '🍗', accent: '#ff9e6e', face: 'wink',    icon: 'chicken.png' },
+  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       icon: '🥖', accent: '#ffd166', face: 'tongue',  icon: 'bagutte.png' },
+  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            icon: '🍤', accent: '#ff9472', face: 'havefun', icon: 'shrimp.png' },
 ];
 
 /* ===== geometry utils ===== */
@@ -485,15 +485,19 @@ export default function MeltyDipRoulette() {
       )}
 
       {/* 画面内スタイル（既存の見た目を踏襲＋画像対応） */}
-      <style jsx global>{`
-        body.meltydip-body {
-          background:
-            radial-gradient(circle at 20% 20%, rgba(255,163,102,.16), transparent 50%),
-            radial-gradient(circle at 80% 0%, rgba(255,230,140,.18), transparent 55%),
-            linear-gradient(180deg, #070713, #0c0c1f);
-          color:#eef2ff;
-        }
-      `}</style>
+ <style jsx global>{`
+  body.meltydip-body {
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,163,102,.16), transparent 50%),
+      radial-gradient(circle at 80% 0%, rgba(255,230,140,.18), transparent 55%),
+      linear-gradient(180deg, #070713, #0c0c1f),
+      url('img/bg/top.png'); /* ← ここを相対パスに */
+    background-size: auto, auto, auto, cover;
+    background-repeat: no-repeat;
+    background-position: center top;
+    background-attachment: fixed;
+  }
+`}</style>
       <style jsx>{`
         .meltydip-app{position:relative;min-height:100vh;overflow:hidden}
         .backdrop{position:absolute;inset:0;pointer-events:none}
@@ -527,6 +531,12 @@ export default function MeltyDipRoulette() {
         .label-inner{display:grid;place-items:center;transform-origin:center;translate:0 clamp(-44%,-16vw,-48%);text-align:center;gap:.3rem}
         .emoji-icon{width:clamp(28px,4vw,44px);height:auto;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
         .label .name{font-size:clamp(.68rem,1.6vw,.85rem);letter-spacing:.02em;background:rgba(10,12,24,.68);padding:.3rem .6rem;border-radius:999px;border:1px solid rgba(255,255,255,.16)}
+        
+  /* ←このあたりに追記 */
+  .label .icon{ width:clamp(22px,3vw,36px); height:auto; display:block }
+  .item-list .icon{ width:20px; height:20px; vertical-align:-4px; margin-right:6px }
+  .item-list .icon.sm{ width:18px; height:18px }
+  .history .icon.xs{ width:16px; height:16px; margin-right:6px }
         .hub{position:absolute;inset:clamp(130px,22vw,180px);border-radius:50%;background:radial-gradient(circle at 50% 30%, rgba(255,209,120,.26), rgba(255,120,90,.1));border:2px solid rgba(255,255,255,.18);display:grid;place-items:center;text-align:center;gap:.2rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,244,220,.9)}
         .hub-title{font-size:clamp(.72rem,2vw,1.2rem)} .hub-sub{font-size:clamp(.6rem,1.8vw,.9rem)}
         .pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:clamp(28px,4vw,40px);height:clamp(80px,14vw,120px);display:flex;justify-content:center}
