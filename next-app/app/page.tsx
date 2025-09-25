@@ -2,19 +2,31 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+/* ===== base path (GH Pages 対応) ===== */
+const prefix = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+const img = (file: string) => `${prefix}/img/bg/${file}`;
+
 /* ===== types ===== */
 type FaceExpression = 'smile' | 'cheer' | 'surprised' | 'wink' | 'tongue' | 'havefun';
-type Item = { id: string; name: string; description: string; emoji: string; accent: string; face: FaceExpression };
+type Item = {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  accent: string;
+  face: FaceExpression;
+  icon: string; // ← 画像ファイル名を追加
+};
 type Result = { id: string; name: string; emoji: string };
 
 /* ===== items (6種類) ===== */
 const ITEMS: Item[] = [
-  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', emoji: '🥦', accent: '#5ed67d', face: 'cheer' },
-  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           emoji: '🍖', accent: '#ff7f7f', face: 'smile' },
-  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         emoji: '🥩', accent: '#f76367', face: 'smile' },
-  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        emoji: '🍗', accent: '#ff9e6e', face: 'wink' },
-  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       emoji: '🥖', accent: '#ffd166', face: 'tongue' },
-  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            emoji: '🍤', accent: '#ff9472', face: 'havefun' },
+  { id: 'veg',    name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', emoji: '🥦', accent: '#5ed67d', face: 'cheer',   icon: 'veg.png' },
+  { id: 'pork',   name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           emoji: '🍖', accent: '#ff7f7f', face: 'smile',   icon: 'pork.png' },
+  { id: 'beef',   name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         emoji: '🥩', accent: '#f76367', face: 'smile',   icon: 'beef.png' },
+  { id: 'chick',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        emoji: '🍗', accent: '#ff9e6e', face: 'wink',    icon: 'chicken.png' },
+  { id: 'bagu',   name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       emoji: '🥖', accent: '#ffd166', face: 'tongue',  icon: 'bage.png' },
+  { id: 'shrimp', name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            emoji: '🍤', accent: '#ff9472', face: 'havefun', icon: 'shrinp.png' },
 ];
 
 /* ===== geometry utils ===== */
@@ -40,8 +52,7 @@ const FaceArt = ({ expression }: { expression: FaceExpression }) => {
     surprised:
       'M190 182 C170 182 155 198 155 218 C155 242 172 262 196 262 C220 262 236 244 236 218 C236 198 222 182 200 182 Z',
     wink: 'M115 198 C155 234 235 234 275 198',
-    tongue:
-      'M120 188 C170 232 230 232 280 188 L276 220 C248 260 208 272 180 240 Z',
+    tongue: 'M120 188 C170 232 230 232 280 188 L276 220 C248 260 208 272 180 240 Z',
     havefun: 'M115 188 C160 238 240 238 285 188',
   };
 
@@ -79,22 +90,8 @@ const FaceArt = ({ expression }: { expression: FaceExpression }) => {
         fill={expression === 'surprised' ? '#ff7770' : 'none'}
       />
       {/* eyebrows */}
-      <path
-        d="M130 110 Q140 96 170 108"
-        stroke="#3d2a18"
-        strokeWidth="10"
-        strokeLinecap="round"
-        fill="none"
-        transform={brow[expression].left}
-      />
-      <path
-        d="M210 108 Q240 96 256 114"
-        stroke="#3d2a18"
-        strokeWidth="10"
-        strokeLinecap="round"
-        fill="none"
-        transform={brow[expression].right}
-      />
+      <path d="M130 110 Q140 96 170 108" stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill="none" transform={brow[expression].left} />
+      <path d="M210 108 Q240 96 256 114" stroke="#3d2a18" strokeWidth="10" strokeLinecap="round" fill="none" transform={brow[expression].right} />
 
       {/* cheeks / rings */}
       <rect x="165" y="180" width="30" height="46" rx="14" fill="#ff4757" stroke="#862133" strokeWidth="4" />
@@ -154,6 +151,9 @@ export default function MeltyDipRoulette() {
   const highlightTimerRef = useRef<number>();
   const [muted, setMuted] = useState(false);
   const audioRef = useRef<AudioContext | null>(null);
+
+  const [flashImg, setFlashImg] = useState<string | null>(null);
+  const flashTimerRef = useRef<number>();
 
   const ensureAudio = useCallback(() => {
     if (muted) return null;
@@ -219,7 +219,18 @@ export default function MeltyDipRoulette() {
 
   /* === controls === */
   const startSpin = () => {
-    if (modeRef.current !== 'idle' || spinsLeftRef.current <= 0) return;
+    if (modeRef.current !== 'idle') return;
+
+    // オーバーレイが出ているなら閉じる
+    if (showStart) setShowStart(false);
+
+    // 残回数が0なら1回ぶんシードして回せるようにする
+    if (spinsLeftRef.current <= 0) {
+      setSpinsLeft(1);
+      spinsLeftRef.current = 1;
+      showToastMessage('お試しスピン 1回');
+    }
+
     velocityRef.current = 0.1;
     modeRef.current = 'spinning';
     setMode('spinning');
@@ -248,7 +259,7 @@ export default function MeltyDipRoulette() {
     setMode('stopping');
   };
 
-  /* === finishStop（※useEffectより前に定義してビルドエラーを回避） === */
+  /* === finishStop（※useEffectより前に定義） === */
   const finishStop = useCallback(() => {
     modeRef.current = 'idle';
     setMode('idle');
@@ -268,6 +279,11 @@ export default function MeltyDipRoulette() {
 
     setResults((prev) => [...prev, { id: item.id, name: item.name, emoji: item.emoji }]);
 
+    // 停止直後のフラッシュ画像
+    setFlashImg(img(item.icon));
+    if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = window.setTimeout(() => setFlashImg(null), 900);
+
     const next = Math.max(0, spinsLeftRef.current - 1);
     spinsLeftRef.current = next;
     setSpinsLeft(next);
@@ -281,94 +297,48 @@ export default function MeltyDipRoulette() {
     }
   }, [indexFromRotation, playResultChime, showToastMessage]);
 
-/* === RAF loop === */
-useEffect(() => {
-  let frame = 0;
-  let last = performance.now();
+  /* === RAF loop === */
+  useEffect(() => {
+    let frame = 0;
+    let last = performance.now();
 
-  const step = (now: number) => {
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
+    const step = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
 
-    if (modeRef.current === 'spinning') {
-      velocityRef.current = Math.min(18, velocityRef.current + 24 * dt);
-      const next = rotationRef.current + velocityRef.current * dt;
-      setRotation(next);
-      rotationRef.current = next;
-    } else if (modeRef.current === 'stopping') {
-      const elapsed = (now - stopStartTimeRef.current) / 1000;
-      const t = Math.min(1, elapsed / stopDurationRef.current);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const value = stopStartRef.current + (stopTargetRef.current - stopStartRef.current) * eased;
-      setRotation(value);
-      rotationRef.current = value;
-      if (t >= 1) finishStop();
-    }
+      if (modeRef.current === 'spinning') {
+        velocityRef.current = Math.min(18, velocityRef.current + 24 * dt);
+        const next = rotationRef.current + velocityRef.current * dt;
+        setRotation(next);
+        rotationRef.current = next;
+      } else if (modeRef.current === 'stopping') {
+        const elapsed = (now - stopStartTimeRef.current) / 1000;
+        const t = Math.min(1, elapsed / stopDurationRef.current);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const value = stopStartRef.current + (stopTargetRef.current - stopStartRef.current) * eased;
+        setRotation(value);
+        rotationRef.current = value;
+        if (t >= 1) finishStop();
+      }
+
+      frame = window.requestAnimationFrame(step);
+    };
 
     frame = window.requestAnimationFrame(step);
-  };
+    return () => window.cancelAnimationFrame(frame);
+  }, [finishStop]);
 
-  frame = window.requestAnimationFrame(step);
-  return () => window.cancelAnimationFrame(frame);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []); // ← 依存配列は空にする
   /* === unmount cleanup === */
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
       if (faceTimerRef.current) window.clearTimeout(faceTimerRef.current);
       if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current);
+      if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
     };
   }, []);
 
-  /* === game flow === */
-  const choosePlayers = (count: number) => {
-    const total = count * 2;
-    setSpinsLeft(total);
-    spinsLeftRef.current = total;
-    setResults([]);
-    setShowStart(false);
-    showToastMessage(`人数 ${count}人 / 合計 ${total}回`);
-  };
-
-  const resetGame = () => {
-    modeRef.current = 'idle';
-    setMode('idle');
-    setRotation(0);
-    rotationRef.current = 0;
-    velocityRef.current = 0;
-    setSpinsLeft(0);
-    spinsLeftRef.current = 0;
-    setResults([]);
-    setFace(null);
-    setShowStart(true);
-    setShowSummary(false);
-    setShowCongrats(false);
-    setHighlightIdx(null);
-  };
-
-  const again = () => {
-    setShowSummary(false);
-    setShowStart(true);
-    setRotation(0);
-    rotationRef.current = 0;
-    setResults([]);
-  };
-
-  const toggleMute = () => {
-    setMuted((prev) => !prev);
-    showToastMessage(muted ? 'サウンドON' : 'ミュート');
-  };
-
-  const resultSummary = useMemo(() => {
-    const map = new Map<string, { name: string; count: number; emoji: string }>();
-    results.forEach((r) => {
-      if (!map.has(r.id)) map.set(r.id, { name: r.name, count: 0, emoji: r.emoji });
-      map.get(r.id)!.count += 1;
-    });
-    return Array.from(map.values());
-  }, [results]);
-
+  /* === UI helpers === */
   const ledBulbs = useMemo(() => {
     const total = 48;
     return Array.from({ length: total }, (_, i) => ({ index: i, angle: i * (360 / total) }));
@@ -385,6 +355,8 @@ useEffect(() => {
   return (
     <main className="meltydip-app">
       <div className="backdrop">
+        {/* 背景写真 */}
+        <div className="bg-photo" style={{ backgroundImage: `url(${img('top.png')})` }} aria-hidden />
         <div className="blur" />
         <div className="hero-copy">
           <span className="eyebrow">Cheese Wonderland Special</span>
@@ -427,11 +399,12 @@ useEffect(() => {
                 })}
               </svg>
 
+              {/* ← 絵文字の代わりにアイコン画像を表示 */}
               <div className="labels">
                 {ITEMS.map((item, index) => (
                   <div key={item.id} className="label" style={{ transform: `rotate(${index * SEGMENT_ANGLE}deg)` }}>
                     <div className="label-inner" style={{ transform: `rotate(${-index * SEGMENT_ANGLE}deg)` }}>
-                      <span className="emoji" aria-hidden>{item.emoji}</span>
+                      <img className="emoji-icon" src={img(item.icon)} alt={item.name} draggable={false} />
                       <span className="name">{item.name}</span>
                     </div>
                   </div>
@@ -443,30 +416,26 @@ useEffect(() => {
 
             <div className="pointer"><div className="pointer-inner" /></div>
           </div>
+
+          <div className="controls under-wheel">
+            <button onClick={startSpin} disabled={mode !== 'idle'}>回す 🎡</button>
+            <button onClick={stopSpin} disabled={mode !== 'spinning'}>止める ⏹</button>
+            <div className="status">
+              <span className="label">残り</span><strong>{spinsLeft > 0 ? spinsLeft : '--'} 回</strong>
+              <span className="now">いま：{ITEMS[activeIndex]?.name ?? '—'}</span>
+            </div>
+          </div>
         </div>
 
         <aside className="side-panel">
-          <div className="panel-card">
-            <h2>プレイ状況</h2>
-            <div className="status-grid">
-              <div className="status"><span className="label">残り回数</span><strong>{spinsLeftRef.current > 0 ? spinsLeftRef.current : '--'} 回</strong></div>
-              <div className="status"><span className="label">現在の候補</span><strong>{ITEMS[activeIndex]?.emoji} {ITEMS[activeIndex]?.name}</strong></div>
-            </div>
-            <div className="controls">
-              <button onClick={startSpin} disabled={mode !== 'idle' || spinsLeftRef.current <= 0}>回す 🎡</button>
-              <button onClick={stopSpin} disabled={mode !== 'spinning'}>止める ⏹</button>
-              <button className="ghost" onClick={toggleMute}>{muted ? '🔇' : '🔈'}</button>
-              <button className="ghost" onClick={resetGame}>リセット 🔄</button>
-            </div>
-          </div>
-
           <div className="panel-card">
             <h2>トッピング一覧</h2>
             <ul className="item-list">
               {ITEMS.map((it) => (
                 <li key={it.id}>
                   <span className="dot" style={{ background: it.accent }} />
-                  <div><strong>{it.emoji} {it.name}</strong><p>{it.description}</p></div>
+                  <img className="inline-icon" src={img(it.icon)} alt="" />
+                  <div><strong>{it.name}</strong><p>{it.description}</p></div>
                 </li>
               ))}
             </ul>
@@ -484,20 +453,8 @@ useEffect(() => {
       </section>
 
       {toast && <div className="toast">{toast}</div>}
-
-      {showStart && (
-        <div className="overlay start">
-          <div className="card">
-            <h2>人数を選択</h2>
-            <p>1人2回プレイできます。チーム人数を選んでスタート！</p>
-            <div className="player-grid">{[1, 2, 3, 4, 5, 6].map((n) => <button key={n} onClick={() => choosePlayers(n)}>{n}</button>)}</div>
-          </div>
-        </div>
-      )}
-
       {face && (<div className="overlay face"><div className="face-wrap"><FaceArt expression={face} /></div></div>)}
       {showCongrats && (<div className="overlay congrats"><CongratsCard /></div>)}
-
       {showSummary && (
         <div className="overlay summary">
           <div className="card">
@@ -513,37 +470,46 @@ useEffect(() => {
               </tbody>
             </table>
             <div className="summary-actions">
-              <button onClick={again}>もう一度</button>
+              <button onClick={() => { setShowSummary(false); setShowStart(true); }}>もう一度</button>
               <button className="ghost" onClick={() => setShowSummary(false)}>閉じる</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 画面内スタイル */}
+      {/* 停止直後のフラッシュ表示 */}
+      {flashImg && (
+        <div className="flash" aria-hidden>
+          <img src={flashImg} alt="" />
+        </div>
+      )}
+
+      {/* 画面内スタイル（既存の見た目を踏襲＋画像対応） */}
       <style jsx global>{`
         body.meltydip-body {
           background:
             radial-gradient(circle at 20% 20%, rgba(255,163,102,.16), transparent 50%),
             radial-gradient(circle at 80% 0%, rgba(255,230,140,.18), transparent 55%),
             linear-gradient(180deg, #070713, #0c0c1f);
+          color:#eef2ff;
         }
       `}</style>
       <style jsx>{`
-        /* ここから下はPDF版と同等（縮約なし）— 長いのでそのまま貼ってOK */
-        .meltydip-app{position:relative;min-height:100vh;color:#eef2ff;overflow:hidden}
+        .meltydip-app{position:relative;min-height:100vh;overflow:hidden}
         .backdrop{position:absolute;inset:0;pointer-events:none}
+        .bg-photo{position:absolute;inset:0;background:center/cover no-repeat;filter:brightness(.5)}
         .backdrop .blur{position:absolute;inset:-40px;background:
           radial-gradient(circle at 30% 20%, rgba(255,180,120,.22), transparent 50%),
           radial-gradient(circle at 90% 15%, rgba(255,90,130,.18), transparent 55%),
           radial-gradient(circle at 40% 80%, rgba(110,190,255,.16), transparent 60%);
-          filter:blur(120px);opacity:.75}
+          filter:blur(120px);opacity:.65}
         .hero-copy{position:absolute;top:clamp(48px,8vw,80px);left:clamp(40px,6vw,120px);max-width:min(420px,40vw)}
         .hero-copy .eyebrow{display:inline-flex;gap:.4rem;padding:.4rem .8rem;border-radius:999px;background:rgba(255,209,102,.16);color:#ffdd83;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.75rem}
         .hero-copy h1{margin:.8rem 0 .4rem;font-size:clamp(32px,4vw,58px);letter-spacing:-.01em}
         .hero-copy p{margin:0;line-height:1.7;color:rgba(230,235,255,.8);font-size:.98rem}
         .hero-face{position:absolute;top:clamp(60px,16vw,160px);right:clamp(40px,8vw,140px);width:min(320px,32vw);opacity:.78}
         .hero-face :global(.face-art){width:100%;height:auto}
+
         .stage{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,420px);gap:32px;padding:clamp(120px,16vw,160px) clamp(32px,6vw,60px) 60px}
         .wheel-area{display:grid;place-items:center}
         .wheel-wrapper{position:relative;width:min(620px,72vw);aspect-ratio:1/1;display:grid;place-items:center;--led-radius:calc(50% - clamp(20px,3vw,36px))}
@@ -551,6 +517,7 @@ useEffect(() => {
         .led{position:absolute;width:clamp(10px,1.2vw,16px);aspect-ratio:1/1;border-radius:50%;background:radial-gradient(circle, rgba(255,230,160,.9), rgba(255,150,60,.3));box-shadow:0 0 12px rgba(255,180,80,.4);opacity:.65;transition:.2s}
         .led.spin{animation:ledPulse 1.4s linear infinite}
         .led.highlight{opacity:1;box-shadow:0 0 18px rgba(255,230,180,.85),0 0 40px rgba(255,160,60,.45)}
+
         .wheel{position:relative;width:100%;height:100%;border-radius:50%;backdrop-filter:blur(8px);background:rgba(14,18,40,.4);border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 80px rgba(0,0,0,.55);transition:transform .18s ease-out}
         .wheel svg{position:absolute;inset:clamp(26px,4vw,38px);width:calc(100% - clamp(52px,8vw,76px));height:calc(100% - clamp(52px,8vw,76px))}
         .segment{transition:filter .3s ease, opacity .3s ease}
@@ -558,32 +525,33 @@ useEffect(() => {
         .labels{position:absolute;inset:clamp(26px,4vw,38px);display:grid;place-items:center;pointer-events:none}
         .label{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center}
         .label-inner{display:grid;place-items:center;transform-origin:center;translate:0 clamp(-44%,-16vw,-48%);text-align:center;gap:.3rem}
-        .label .emoji{font-size:clamp(22px,3vw,36px)}
+        .emoji-icon{width:clamp(28px,4vw,44px);height:auto;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
         .label .name{font-size:clamp(.68rem,1.6vw,.85rem);letter-spacing:.02em;background:rgba(10,12,24,.68);padding:.3rem .6rem;border-radius:999px;border:1px solid rgba(255,255,255,.16)}
         .hub{position:absolute;inset:clamp(130px,22vw,180px);border-radius:50%;background:radial-gradient(circle at 50% 30%, rgba(255,209,120,.26), rgba(255,120,90,.1));border:2px solid rgba(255,255,255,.18);display:grid;place-items:center;text-align:center;gap:.2rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,244,220,.9)}
         .hub-title{font-size:clamp(.72rem,2vw,1.2rem)} .hub-sub{font-size:clamp(.6rem,1.8vw,.9rem)}
         .pointer{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:clamp(28px,4vw,40px);height:clamp(80px,14vw,120px);display:flex;justify-content:center}
         .pointer-inner{width:clamp(12px,1.6vw,18px);height:100%;background:linear-gradient(180deg,#ffce6a,#ff6f91);clip-path:polygon(50% 0%,90% 52%,50% 100%,10% 52%);box-shadow:0 12px 40px rgba(255,110,130,.45)}
+
+        .controls.under-wheel{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center;margin-top:14px}
+        .controls.under-wheel button{appearance:none;border:none;border-radius:14px;padding:12px 14px;font-size:.95rem;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8b6e);color:#1d1d22;box-shadow:0 14px 36px rgba(0,0,0,.35);transition:.15s}
+        .controls.under-wheel button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
+        .status{display:flex;gap:10px;align-items:center;justify-content:flex-end}
+        .status .label{opacity:.75}
+
         .side-panel{display:flex;flex-direction:column;gap:18px}
         .panel-card{background:rgba(10,12,28,.72);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:20px;box-shadow:0 20px 46px rgba(0,0,0,.35);backdrop-filter:blur(14px)}
         .panel-card h2{margin:0 0 12px;font-size:1.1rem;letter-spacing:.04em;text-transform:uppercase}
-        .status-grid{display:grid;gap:12px}
-        .status{background:rgba(255,255,255,.04);border-radius:14px;padding:14px 16px;border:1px solid rgba(255,255,255,.08)}
-        .status .label{display:block;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
-        .status strong{font-size:1.2rem}
-        .controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
-        .controls button{appearance:none;border:none;border-radius:14px;padding:12px 14px;font-size:.95rem;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8b6e);color:#1d1d22;box-shadow:0 14px 36px rgba(0,0,0,.35);transition:.15s}
-        .controls button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
-        .controls button:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 22px 48px rgba(255,110,130,.32)}
-        .controls .ghost{background:rgba(24,28,48,.85);color:rgba(240,244,255,.9);border:1px solid rgba(255,255,255,.14);box-shadow:none}
         .item-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
-        .item-list li{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}
-        .item-list .dot{width:12px;height:12px;border-radius:50%;margin-top:6px;box-shadow:0 0 12px rgba(255,200,120,.5)}
+        .item-list li{display:grid;grid-template-columns:12px 40px 1fr;gap:12px;align-items:center}
+        .item-list .dot{width:12px;height:12px;border-radius:50%;box-shadow:0 0 12px rgba(255,200,120,.5)}
+        .inline-icon{width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
         .item-list strong{display:block;font-size:.95rem}
         .item-list p{margin:.2rem 0 0;font-size:.85rem;opacity:.76}
         .history{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:.9rem;max-height:180px;overflow-y:auto}
         .history li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
-        .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(15,18,40,.92);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:12px 24px;font-weight:700;letter-spacing:.04em;z-index:20;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+
+        .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(15,18,40,.92);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:12px 24px;font-weight:700;letter-spacing:.04em;z-index:50;box-shadow:0 16px 40px rgba(0,0,0,.5)}
+
         .overlay{position:fixed;inset:0;display:grid;place-items:center;z-index:40;background:rgba(4,6,14,.72);backdrop-filter:blur(12px)}
         .overlay.start .card,.overlay.summary .card{background:rgba(14,18,38,.9);border-radius:20px;border:1px solid rgba(255,255,255,.12);padding:clamp(28px,6vw,40px);width:min(90vw,520px);box-shadow:0 30px 80px rgba(0,0,0,.55)}
         .player-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
@@ -597,6 +565,7 @@ useEffect(() => {
         .congrats-card p{margin:0;color:rgba(235,238,255,.85);font-size:1rem}
         .congrats-card .spark{position:absolute;inset:0;border-radius:inherit;background:conic-gradient(from 180deg, rgba(255,255,255,.12), transparent 30%, rgba(255,255,255,.12) 60%, transparent 90%);mix-blend-mode:screen;animation:rotate 8s linear infinite;opacity:.45}
         .congrats-card .spark.big{animation-duration:12s;opacity:.25}
+
         .overlay.summary table{width:100%;border-collapse:collapse;margin-top:16px;font-size:.95rem;background:rgba(255,255,255,.04);border-radius:14px;overflow:hidden}
         .overlay.summary th,.overlay.summary td{text-align:left;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
         .overlay.summary th:last-child,.overlay.summary td:last-child{text-align:right}
@@ -604,11 +573,17 @@ useEffect(() => {
         .summary-actions{margin-top:18px;display:flex;gap:10px}
         .summary-actions button{padding:12px 18px;border-radius:14px;border:none;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8a65);color:#1d1d24;box-shadow:0 14px 36px rgba(0,0,0,.35)}
         .summary-actions .ghost{background:rgba(20,24,42,.86);color:rgba(240,244,255,.9);border:1px solid rgba(255,255,255,.14);box-shadow:none}
+
+        .flash{position:fixed;inset:0;display:grid;place-items:center;z-index:60;pointer-events:none;background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.08), transparent 60%);animation:flashFade .9s ease forwards}
+        .flash img{width:min(30vw,240px);height:auto;object-fit:contain;filter:drop-shadow(0 12px 40px rgba(0,0,0,.5))}
+
         @keyframes ledPulse{0%,100%{opacity:.45;box-shadow:0 0 12px rgba(255,180,80,.35)}50%{opacity:.95;box-shadow:0 0 20px rgba(255,200,140,.85)}}
         @keyframes popIn{0%{transform:scale(.86);opacity:0}100%{transform:scale(1);opacity:1}}
         @keyframes rotate{to{transform:rotate(360deg)}}
+        @keyframes flashFade{0%{opacity:0}10%{opacity:1}80%{opacity:.9}100%{opacity:0}}
+
         @media (max-width:1100px){.stage{grid-template-columns:1fr;padding:clamp(120px,16vw,160px) clamp(20px,4vw,36px) 60px}.side-panel{order:-1}.hero-face{opacity:.55}}
-        @media (max-width:720px){.hero-copy{left:20px;right:20px;max-width:none}.hero-face{display:none}.wheel-wrapper{width:min(86vw,420px)}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.panel-card{padding:16px}.item-list li{grid-template-columns:12px 1fr}}
+        @media (max-width:720px){.hero-copy{left:20px;right:20px;max-width:none}.hero-face{display:none}.wheel-wrapper{width:min(86vw,420px)}.controls.under-wheel{grid-template-columns:repeat(2,minmax(0,1fr))}.panel-card{padding:16px}.item-list li{grid-template-columns:12px 40px 1fr}}
       `}</style>
     </main>
   );
