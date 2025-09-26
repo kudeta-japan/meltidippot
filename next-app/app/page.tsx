@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-/* ===== 画像パス（必ず相対で） ===== */
+/* ===== 画像パス（GitHub Pagesでも404にならない相対パス） ===== */
 const img = (file: string) => `img/bg/${file}`;
 
 /* ===== types ===== */
@@ -10,22 +10,22 @@ type Item = {
   id: string;
   name: string;
   description: string;
-  icon: string;   // ← 画像ファイル名のみ
+  icon: string;   // public/img/bg/ のファイル名
   accent: string;
 };
 type Result = { id: string; name: string; icon: string };
 
-/* ===== items (6種類) ===== */
+/* ===== items ===== */
 const ITEMS: Item[] = [
-  { id: 'veg',     name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', icon: 'veg.png',      accent: '#5ed67d' },
-  { id: 'pork',    name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',           icon: 'pork.png',     accent: '#ff7f7f' },
-  { id: 'beef',    name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                         icon: 'beef.png',     accent: '#f76367' },
-  { id: 'chicken', name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                        icon: 'chicken.png',  accent: '#ff9e6e' },
-  { id: 'baguette',name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                       icon: 'baguette.png', accent: '#ffd166' },
-  { id: 'shrimp',  name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                            icon: 'shrimp.png',   accent: '#ff9472' },
+  { id: 'veg',      name: '野菜盛り合わせ',   description: '色とりどりの野菜を軽くロースト。チーズとの相性ばつぐん。', icon: 'veg.png',      accent: '#5ed67d' },
+  { id: 'pork',     name: 'ローストポーク',   description: 'しっとりジューシー、コクのあるチーズと好相性。',             icon: 'pork.png',     accent: '#ff7f7f' },
+  { id: 'beef',     name: '牛コロカツ',       description: '食べごたえ満点のひとくちビーフカツ。',                           icon: 'beef.png',     accent: '#f76367' },
+  { id: 'chicken',  name: 'フライドチキン',   description: 'カリッと衣にチーズが絡んで止まらない！',                          icon: 'chicken.png',  accent: '#ff9e6e' },
+  { id: 'baguette', name: 'ガーリックバゲット', description: '香ばしい香りでチーズがさらに主役に。',                         icon: 'baguette.png', accent: '#ffd166' },
+  { id: 'shrimp',   name: '海老フリッター',   description: 'プリッと食感に濃厚チーズをダイブ。',                              icon: 'shrimp.png',   accent: '#ff9472' },
 ];
 
-/* ===== geometry utils ===== */
+/* ===== geo utils ===== */
 const SEGMENT_ANGLE = 360 / ITEMS.length;
 const toRadians = (deg: number) => (deg * Math.PI) / 180;
 const clampAngle = (deg: number) => ((deg % 360) + 360) % 360;
@@ -40,7 +40,7 @@ function describeArc(start: number, end: number, radius: number) {
   return `M 0 0 L ${s.x.toFixed(3)} ${s.y.toFixed(3)} A ${radius} ${radius} 0 ${large} 1 ${e.x.toFixed(3)} ${e.y.toFixed(3)} Z`;
 }
 
-/* ===== 効果音（そのまま） ===== */
+/* ===== audio ===== */
 function createAudioContext() {
   if (typeof window === 'undefined') return null;
   try {
@@ -52,15 +52,15 @@ function createAudioContext() {
 }
 
 export default function MeltyDipRoulette() {
-  /* === state & refs === */
-  // 針の角度（度）。0度＝真上。時計回りに増える。
+  /* --- state/refs --- */
+  // 針の角度（中央基準で回転）
   const [pointer, setPointer] = useState(0);
   const pointerRef = useRef(0);
 
   const [mode, setMode] = useState<'idle' | 'spinning' | 'stopping'>('idle');
   const modeRef = useRef<'idle' | 'spinning' | 'stopping'>('idle');
 
-  const velocityRef = useRef(0);         // 角速度（deg/s）
+  const velocityRef = useRef(0); // deg/s
   const stopStartRef = useRef(0);
   const stopTargetRef = useRef(0);
   const stopStartTimeRef = useRef(0);
@@ -76,7 +76,8 @@ export default function MeltyDipRoulette() {
   const [muted, setMuted] = useState(false);
   const audioRef = useRef<AudioContext | null>(null);
 
-  const autostopTimer = useRef<number>(); // 安全停止タイマー
+  const autostopTimer = useRef<number>();    // スピンし続け防止
+  const hardFinishTimer = useRef<number>();  // 万一止まらない時の最終保険
 
   const ensureAudio = useCallback(() => {
     if (muted) return null;
@@ -116,51 +117,50 @@ export default function MeltyDipRoulette() {
     toastTimerRef.current = window.setTimeout(() => setToast(null), 1400);
   }, []);
 
-  /* === computed === */
+  /* --- computed（いま指しているセグメント） --- */
   const activeIndex = useMemo(() => {
     const a = clampAngle(pointerRef.current);
     return Math.floor((a + SEGMENT_ANGLE / 2) / SEGMENT_ANGLE) % ITEMS.length;
   }, [pointer]);
 
-  /* === sync refs === */
+  /* --- sync refs --- */
   useEffect(() => { pointerRef.current = pointer; }, [pointer]);
-  useEffect(() => { spinsLeftRef.current = spinsLeft; }, [spinsLeft]);
   useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { spinsLeftRef.current = spinsLeft; }, [spinsLeft]);
 
   useEffect(() => {
     document.body.classList.add('meltydip-body');
     return () => { document.body.classList.remove('meltydip-body'); };
   }, []);
 
-  /* === controls === */
+  /* --- controls --- */
   const startSpin = () => {
     if (modeRef.current !== 'idle') return;
 
-    // 残回数が0でも必ず1回は回せる
+    // 残り0でも必ず1回は回せる
     if (spinsLeftRef.current <= 0) {
       setSpinsLeft(1);
       spinsLeftRef.current = 1;
       showToastMessage('お試しスピン 1回');
     }
 
-    velocityRef.current = 20; // 初速
+    velocityRef.current = 120; // 初速（deg/s）
     modeRef.current = 'spinning';
     setMode('spinning');
 
-    // 3秒経っても止めない場合は自動停止
     if (autostopTimer.current) window.clearTimeout(autostopTimer.current);
     autostopTimer.current = window.setTimeout(() => {
       if (modeRef.current === 'spinning') stopSpin();
-    }, 3000);
+    }, 2500); // 2.5秒で自動停止キック
   };
 
   const stopSpin = () => {
     if (modeRef.current !== 'spinning') return;
+
     const current = clampAngle(pointerRef.current);
     const idx = Math.floor((current + SEGMENT_ANGLE / 2) / SEGMENT_ANGLE) % ITEMS.length;
     const centerAngle = idx * SEGMENT_ANGLE;
 
-    // 目標は「現在のエリアの中心 ± 少しのジッター」＋周回
     const jitterRange = SEGMENT_ANGLE / 2 - 6;
     const jitter = (Math.random() * 2 - 1) * jitterRange;
     const targetAngle = clampAngle(centerAngle + jitter);
@@ -178,6 +178,16 @@ export default function MeltyDipRoulette() {
     setMode('stopping');
 
     if (autostopTimer.current) window.clearTimeout(autostopTimer.current);
+
+    // 万一 ease が完走しなかった時の最終保険（強制フィニッシュ）
+    if (hardFinishTimer.current) window.clearTimeout(hardFinishTimer.current);
+    hardFinishTimer.current = window.setTimeout(() => {
+      if (modeRef.current === 'stopping') {
+        pointerRef.current = stopTargetRef.current;
+        setPointer(stopTargetRef.current);
+        finishStop();
+      }
+    }, 6000);
   };
 
   const finishStop = useCallback(() => {
@@ -197,7 +207,7 @@ export default function MeltyDipRoulette() {
     setSpinsLeft(next);
   }, [playResultChime, showToastMessage]);
 
-  /* === RAF loop（針が回る） === */
+  /* --- RAF loop（針が回る） --- */
   useEffect(() => {
     let frame = 0;
     let last = performance.now();
@@ -207,19 +217,19 @@ export default function MeltyDipRoulette() {
       last = now;
 
       if (modeRef.current === 'spinning') {
-        // 加速して上限へ
-        velocityRef.current = Math.min(600, velocityRef.current + 900 * dt); // deg/s
+        // 加速→上限
+        velocityRef.current = Math.min(720, velocityRef.current + 1200 * dt);
         const next = pointerRef.current + velocityRef.current * dt;
-        setPointer(next);
         pointerRef.current = next;
+        setPointer(next);
       } else if (modeRef.current === 'stopping') {
         const elapsed = (now - stopStartTimeRef.current) / 1000;
         const t = Math.min(1, elapsed / stopDurationRef.current);
-        const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+        const eased = 1 - Math.pow(1 - t, 3);
         const value = stopStartRef.current + (stopTargetRef.current - stopStartRef.current) * eased;
-        setPointer(value);
         pointerRef.current = value;
-        if (t >= 0.9999) finishStop(); // 確実にfinish
+        setPointer(value);
+        if (t >= 0.999) finishStop();
       }
 
       frame = window.requestAnimationFrame(step);
@@ -229,25 +239,24 @@ export default function MeltyDipRoulette() {
     return () => window.cancelAnimationFrame(frame);
   }, [finishStop]);
 
-  /* === unmount cleanup === */
+  /* --- cleanup --- */
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
       if (autostopTimer.current) window.clearTimeout(autostopTimer.current);
+      if (hardFinishTimer.current) window.clearTimeout(hardFinishTimer.current);
     };
   }, []);
 
-  /* === UI helpers === */
+  /* --- UI help --- */
   const ledBulbs = useMemo(() => {
     const total = 48;
     return Array.from({ length: total }, (_, i) => ({ index: i, angle: i * (360 / total) }));
   }, []);
 
-  /* ===== render ===== */
   return (
     <main className="meltydip-app">
       <div className="backdrop">
-        {/* 背景写真（相対パス！） */}
         <div className="bg-photo" style={{ backgroundImage: `url(${img('top.png')})` }} aria-hidden />
         <div className="blur" />
         <div className="hero-copy">
@@ -270,7 +279,7 @@ export default function MeltyDipRoulette() {
               ))}
             </div>
 
-            {/* ルーレット盤は固定、針だけ回る */}
+            {/* 盤は固定／針が中央回転 */}
             <div className="wheel">
               <svg viewBox="-110 -110 220 220">
                 <defs>
@@ -297,7 +306,6 @@ export default function MeltyDipRoulette() {
                 })}
               </svg>
 
-              {/* ラベル */}
               <div className="labels">
                 {ITEMS.map((item, index) => (
                   <div key={item.id} className="label" style={{ transform: `rotate(${index * SEGMENT_ANGLE}deg)` }}>
@@ -309,8 +317,12 @@ export default function MeltyDipRoulette() {
                 ))}
               </div>
 
-              {/* 針（これが回る） */}
-              <div className="pointer" style={{ transform: `rotate(${pointer}deg)` }}>
+              {/* 針（中央から上方向へ伸ばす） */}
+              <div
+                className="pointer"
+                style={{ transform: `translate(-50%, -50%) rotate(${clampAngle(pointer)}deg)` }}
+                aria-hidden
+              >
                 <div className="pointer-inner" />
               </div>
             </div>
@@ -357,7 +369,7 @@ export default function MeltyDipRoulette() {
 
       {toast && <div className="toast">{toast}</div>}
 
-      {/* スタイル */}
+      {/* 背景 */}
       <style jsx global>{`
         body.meltydip-body {
           background:
@@ -367,43 +379,62 @@ export default function MeltyDipRoulette() {
         }
       `}</style>
 
+      {/* スタイル */}
       <style jsx>{`
         .meltydip-app{position:relative;min-height:100vh;overflow:hidden;color:#eef2ff}
         .backdrop{position:absolute;inset:0;pointer-events:none}
-        .bg-photo{position:absolute;inset:0;background:center/cover no-repeat url(${img('top.png')});filter:brightness(.55)}
-        .backdrop .blur{position:absolute;inset:-40px;background:
+        .bg-photo{position:absolute;inset:0;background:center/cover no-repeat;filter:brightness(.55)}
+        .blur{position:absolute;inset:-40px;background:
           radial-gradient(circle at 30% 20%, rgba(255,180,120,.22), transparent 50%),
           radial-gradient(circle at 90% 15%, rgba(255,90,130,.18), transparent 55%),
           radial-gradient(circle at 40% 80%, rgba(110,190,255,.16), transparent 60%);
           filter:blur(120px);opacity:.65}
         .hero-copy{position:absolute;top:clamp(48px,8vw,80px);left:clamp(40px,6vw,120px);max-width:min(420px,40vw)}
         .hero-copy .eyebrow{display:inline-flex;gap:.4rem;padding:.4rem .8rem;border-radius:999px;background:rgba(255,209,102,.16);color:#ffdd83;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.75rem}
-        .hero-copy h1{margin:.8rem 0 .4rem;font-size:clamp(32px,4vw,58px);letter-spacing:-.01em}
-        .hero-copy p{margin:0;line-height:1.7;color:rgba(230,235,255,.85);font-size:.98rem}
+        .hero-copy h1{margin:.8rem 0 .4rem;font-size:clamp(32px,4vw,58px)}
+        .hero-copy p{margin:0;line-height:1.7;color:rgba(230,235,255,.85)}
 
         .stage{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,420px);gap:32px;padding:clamp(120px,16vw,160px) clamp(32px,6vw,60px) 60px}
         .wheel-area{display:grid;place-items:center}
         .wheel-wrapper{position:relative;width:min(620px,72vw);aspect-ratio:1/1;display:grid;place-items:center;--led-radius:calc(50% - clamp(20px,3vw,36px))}
         .led-ring{position:absolute;inset:0;display:grid;place-items:center}
-        .led{position:absolute;width:clamp(10px,1.2vw,16px);aspect-ratio:1/1;border-radius:50%;background:radial-gradient(circle, rgba(255,230,160,.9), rgba(255,150,60,.3));box-shadow:0 0 12px rgba(255,180,80,.4);opacity:.65;transition:.2s}
-        .led.spin{animation:ledPulse 1.4s linear infinite}
+        .led{position:absolute;width:clamp(10px,1.2vw,16px);aspect-ratio:1/1;border-radius:50%;background:radial-gradient(circle, rgba(255,230,160,.9), rgba(255,150,60,.3));box-shadow:0 0 12px rgba(255,180,80,.4);opacity:.65}
 
         .wheel{position:relative;width:100%;height:100%;border-radius:50%;backdrop-filter:blur(8px);background:rgba(14,18,40,.4);border:1px solid rgba(255,255,255,.08);box-shadow:0 24px 80px rgba(0,0,0,.55)}
         .wheel svg{position:absolute;inset:clamp(26px,4vw,38px);width:calc(100% - clamp(52px,8vw,76px));height:calc(100% - clamp(52px,8vw,76px))}
         .segment{transition:filter .3s ease, opacity .3s ease}
+
         .labels{position:absolute;inset:clamp(26px,4vw,38px);display:grid;place-items:center;pointer-events:none}
         .label{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center}
         .label-inner{display:grid;place-items:center;transform-origin:center;translate:0 clamp(-44%,-16vw,-48%);text-align:center;gap:.3rem}
         .emoji-icon{width:clamp(28px,4vw,44px);height:auto;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
         .label .name{font-size:clamp(.68rem,1.6vw,.85rem);letter-spacing:.02em;background:rgba(10,12,24,.68);padding:.3rem .6rem;border-radius:999px;border:1px solid rgba(255,255,255,.16)}
 
-        /* 針 */
-        .pointer{position:absolute;top:-18px;left:50%;transform-origin:50% calc(18px); /* 上端を原点に */ width:0;height:0}
-        .pointer-inner{width:clamp(12px,1.6vw,18px);height:clamp(80px,14vw,120px);background:linear-gradient(180deg,#ffce6a,#ff6f91);clip-path:polygon(50% 0%,90% 52%,50% 100%,10% 52%);box-shadow:0 12px 40px rgba(255,110,130,.45);transform:translateX(-50%)}
+        /* 針（中央原点で回す） */
+        .pointer{
+          position:absolute;
+          top:50%;
+          left:50%;
+          width:0;height:0;
+          transform-origin:50% 50%;
+          pointer-events:none;
+        }
+        .pointer-inner{
+          position:absolute;
+          bottom:50%; /* 中心から上に伸ばす */
+          left:50%;
+          width:clamp(12px,1.6vw,18px);
+          height:clamp(90px,16vw,140px);
+          transform:translate(-50%, 0);
+          background:linear-gradient(180deg,#ffce6a,#ff6f91);
+          clip-path:polygon(50% 0%,90% 100%,50% 85%,10% 100%);
+          box-shadow:0 12px 40px rgba(255,110,130,.45);
+          border-radius:6px;
+        }
 
         .controls.under-wheel{display:grid;grid-template-columns:auto auto 1fr;gap:10px;align-items:center;margin-top:14px}
-        .controls.under-wheel button{appearance:none;border:none;border-radius:14px;padding:12px 14px;font-size:.95rem;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8b6e);color:#1d1d22;box-shadow:0 14px 36px rgba(0,0,0,.35);transition:.15s}
-        .controls.under-wheel button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
+        .controls.under-wheel button{appearance:none;border:none;border-radius:14px;padding:12px 14px;font-size:.95rem;font-weight:700;cursor:pointer;background:linear-gradient(180deg,#ffd86b,#ff8b6e);color:#1d1d22;box-shadow:0 14px 36px rgba(0,0,0,.35)}
+        .controls.under-wheel button:disabled{opacity:.5;cursor:not-allowed}
         .status{display:flex;gap:10px;align-items:center;justify-content:flex-end}
         .status .label{opacity:.75}
 
@@ -420,11 +451,10 @@ export default function MeltyDipRoulette() {
         .history li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)}
         .history-icon{width:16px;height:16px;object-fit:contain;margin-right:6px}
 
-        .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(15,18,40,.92);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:12px 24px;font-weight:700;letter-spacing:.04em;z-index:50;box-shadow:0 16px 40px rgba(0,0,0,.5)}
-
+        .toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(15,18,40,.92);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:12px 24px;font-weight:700;letter-spacing:.04em;z-index:50}
         @keyframes ledPulse{0%,100%{opacity:.45;box-shadow:0 0 12px rgba(255,180,80,.35)}50%{opacity:.95;box-shadow:0 0 20px rgba(255,200,140,.85)}}
         @media (max-width:1100px){.stage{grid-template-columns:1fr;padding:clamp(120px,16vw,160px) clamp(20px,4vw,36px) 60px}}
-        @media (max-width:720px){.hero-copy{left:20px;right:20px;max-width:none}.wheel-wrapper{width:min(86vw,420px)}.controls.under-wheel{grid-template-columns:repeat(2,minmax(0,1fr))}.panel-card{padding:16px}.item-list li{grid-template-columns:12px 40px 1fr}}
+        @media (max-width:720px){.wheel-wrapper{width:min(86vw,420px)}.controls.under-wheel{grid-template-columns:repeat(2,minmax(0,1fr))}.panel-card{padding:16px}}
       `}</style>
     </main>
   );
